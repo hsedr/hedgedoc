@@ -3,33 +3,34 @@
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+import type { DarkModePreference } from '../../../redux/dark-mode/types'
 import { cypressAttribute, cypressId } from '../../../utils/cypress-attribute'
 import { Logger } from '../../../utils/logger'
 import { isTestMode } from '../../../utils/test-modes'
 import { ShowIf } from '../../common/show-if/show-if'
 import { WaitSpinner } from '../../common/wait-spinner/wait-spinner'
 import { useExtensionEventEmitter } from '../../markdown-renderer/hooks/use-extension-event-emitter'
-import type { RendererProps } from '../../render-page/markdown-document'
+import type { CommonMarkdownRendererProps } from '../../render-page/renderers/common-markdown-renderer-props'
 import { useEditorReceiveHandler } from '../../render-page/window-post-message-communicator/hooks/use-editor-receive-handler'
 import type {
   ExtensionEvent,
-  OnFirstHeadingChangeMessage,
   OnHeightChangeMessage,
-  RendererType,
   SetScrollStateMessage
 } from '../../render-page/window-post-message-communicator/rendering-message'
+import type { RendererType } from '../../render-page/window-post-message-communicator/rendering-message'
 import { CommunicationMessageType } from '../../render-page/window-post-message-communicator/rendering-message'
 import { useEditorToRendererCommunicator } from '../render-context/editor-to-renderer-communicator-context-provider'
+import type { ScrollProps } from '../synced-scroll/scroll-props'
 import { useEffectOnRenderTypeChange } from './hooks/use-effect-on-render-type-change'
 import { useForceRenderPageUrlOnIframeLoadCallback } from './hooks/use-force-render-page-url-on-iframe-load-callback'
-import { useSendDarkModeStatusToRenderer } from './hooks/use-send-dark-mode-status-to-renderer'
+import { useSendAdditionalConfigurationToRenderer } from './hooks/use-send-additional-configuration-to-renderer'
 import { useSendMarkdownToRenderer } from './hooks/use-send-markdown-to-renderer'
 import { useSendScrollState } from './hooks/use-send-scroll-state'
 import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-export interface RenderIframeProps extends RendererProps {
+export interface RenderIframeProps extends Omit<CommonMarkdownRendererProps & ScrollProps, 'baseUrl'> {
   rendererType: RendererType
-  forcedDarkMode?: boolean
+  forcedDarkMode?: DarkModePreference
   frameClasses?: string
   onRendererStatusChange?: undefined | ((rendererReady: boolean) => void)
   adaptFrameHeightToContent?: boolean
@@ -45,7 +46,6 @@ const log = new Logger('RenderIframe')
  * @param markdownContentLines Array of lines of the markdown content
  * @param onTaskCheckedChange Callback that is fired when a task-list item in the iframe is checked
  * @param scrollState The current {@link ScrollState}
- * @param onFirstHeadingChange Callback that is fired when the first heading of the note changes
  * @param onScroll Callback that is fired when the user scrolls in the iframe
  * @param onMakeScrollSource Callback that is fired when the renderer requests to be set as the current scroll source
  * @param frameClasses CSS classes that should be applied to the iframe
@@ -57,7 +57,6 @@ const log = new Logger('RenderIframe')
 export const RenderIframe: React.FC<RenderIframeProps> = ({
   markdownContentLines,
   scrollState,
-  onFirstHeadingChange,
   onScroll,
   onMakeScrollSource,
   frameClasses,
@@ -91,19 +90,6 @@ export const RenderIframe: React.FC<RenderIframeProps> = ({
   useEffect(() => {
     onRendererStatusChange?.(rendererReady)
   }, [onRendererStatusChange, rendererReady])
-
-  useEditorReceiveHandler(
-    CommunicationMessageType.ON_FIRST_HEADING_CHANGE,
-    useCallback(
-      (values: OnFirstHeadingChangeMessage) => onFirstHeadingChange?.(values.firstHeading),
-      [onFirstHeadingChange]
-    )
-  )
-
-  useEditorReceiveHandler(
-    CommunicationMessageType.ENABLE_RENDERER_SCROLL_SOURCE,
-    useCallback(() => onMakeScrollSource?.(), [onMakeScrollSource])
-  )
 
   const eventEmitter = useExtensionEventEmitter()
 
@@ -155,14 +141,17 @@ export const RenderIframe: React.FC<RenderIframeProps> = ({
   )
 
   useEffectOnRenderTypeChange(rendererType, onIframeLoad)
-  useSendDarkModeStatusToRenderer(forcedDarkMode, rendererReady)
+  useSendAdditionalConfigurationToRenderer(rendererReady, forcedDarkMode)
   useSendMarkdownToRenderer(markdownContentLines, rendererReady)
 
-  useSendScrollState(scrollState)
-
+  useSendScrollState(scrollState, rendererReady)
   useEditorReceiveHandler(
     CommunicationMessageType.SET_SCROLL_STATE,
     useCallback((values: SetScrollStateMessage) => onScroll?.(values.scrollState), [onScroll])
+  )
+  useEditorReceiveHandler(
+    CommunicationMessageType.ENABLE_RENDERER_SCROLL_SOURCE,
+    useCallback(() => onMakeScrollSource?.(), [onMakeScrollSource])
   )
 
   return (

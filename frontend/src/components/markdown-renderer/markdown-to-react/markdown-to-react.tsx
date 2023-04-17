@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { HtmlToReact } from '../../common/html-to-react/html-to-react'
-import type { MarkdownRendererExtension } from '../extensions/base/markdown-renderer-extension'
+import type { MarkdownRendererExtension } from '../extensions/_base-classes/markdown-renderer-extension'
 import { useCombinedNodePreprocessor } from './hooks/use-combined-node-preprocessor'
 import { useConfiguredMarkdownIt } from './hooks/use-configured-markdown-it'
 import { LineContentToLineIdMapper } from './utils/line-content-to-line-id-mapper'
@@ -21,12 +21,13 @@ export interface MarkdownToReactProps {
 }
 
 /**
- * Renders Markdown code.
+ * Renders Markdown code as DOM
  *
  * @param markdownContentLines The Markdown code lines that should be rendered
  * @param additionalMarkdownExtensions A list of {@link MarkdownRendererExtension markdown extensions} that should be used
  * @param newlinesAreBreaks Defines if the alternative break mode of markdown it should be used
  * @param allowHtml Defines if html is allowed in markdown
+ * @see https://markdown-it.github.io/
  */
 export const MarkdownToReact: React.FC<MarkdownToReactProps> = ({
   markdownContentLines,
