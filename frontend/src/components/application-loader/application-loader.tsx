@@ -1,3 +1,4 @@
+'use client'
 /*
  * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
  *
@@ -41,6 +42,8 @@ export const ApplicationLoader: React.FC<PropsWithChildren> = ({ children }) => 
           For further information look into the browser console.
         </Fragment>
       )
+    } else {
+      return null
     }
   }, [error])
 

@@ -23,7 +23,10 @@ import { MediaUploadDto } from '../../../media/media-upload.dto';
 import { MediaService } from '../../../media/media.service';
 import { MulterFile } from '../../../media/multer-file.interface';
 import { Note } from '../../../notes/note.entity';
-import { NotesService } from '../../../notes/notes.service';
+import { PermissionsGuard } from '../../../permissions/permissions.guard';
+import { PermissionsService } from '../../../permissions/permissions.service';
+import { RequirePermission } from '../../../permissions/require-permission.decorator';
+import { RequiredPermission } from '../../../permissions/required-permission.enum';
 import { User } from '../../../users/user.entity';
 import { NoteHeaderInterceptor } from '../../utils/note-header.interceptor';
 import { OpenApi } from '../../utils/openapi.decorator';
@@ -38,7 +41,7 @@ export class MediaController {
   constructor(
     private readonly logger: ConsoleLoggerService,
     private mediaService: MediaService,
-    private noteService: NotesService,
+    private permissionsService: PermissionsService,
   ) {
     this.logger.setContext(MediaController.name);
   }
@@ -60,8 +63,10 @@ export class MediaController {
     name: 'HedgeDoc-Note',
     description: 'ID or alias of the parent note',
   })
+  @UseGuards(PermissionsGuard)
   @UseInterceptors(FileInterceptor('file'))
   @UseInterceptors(NoteHeaderInterceptor)
+  @RequirePermission(RequiredPermission.WRITE)
   @OpenApi(
     {
       code: 201,
@@ -76,15 +81,22 @@ export class MediaController {
   async uploadMedia(
     @UploadedFile() file: MulterFile | undefined,
     @RequestNote() note: Note,
-    @RequestUser() user: User,
+    @RequestUser({ guestsAllowed: true }) user: User | null,
   ): Promise<MediaUploadDto> {
     if (file === undefined) {
       throw new BadRequestException('Request does not contain a file');
     }
-    this.logger.debug(
-      `Received filename '${file.originalname}' for note '${note.id}' from user '${user.username}'`,
-      'uploadMedia',
-    );
+    if (user) {
+      this.logger.debug(
+        `Received filename '${file.originalname}' for note '${note.publicId}' from user '${user.username}'`,
+        'uploadMedia',
+      );
+    } else {
+      this.logger.debug(
+        `Received filename '${file.originalname}' for note '${note.publicId}' from not logged in user`,
+        'uploadMedia',
+      );
+    }
     const upload = await this.mediaService.saveFile(file.buffer, user, note);
     return await this.mediaService.toMediaUploadDto(upload);
   }
@@ -95,21 +107,29 @@ export class MediaController {
     @RequestUser() user: User,
     @Param('filename') filename: string,
   ): Promise<void> {
-    const username = user.username;
-    this.logger.debug(
-      `Deleting '${filename}' for user '${username}'`,
-      'deleteMedia',
-    );
     const mediaUpload = await this.mediaService.findUploadByFilename(filename);
-    if ((await mediaUpload.user).username !== username) {
-      this.logger.warn(
-        `${username} tried to delete '${filename}', but is not the owner`,
+    if (
+      await this.permissionsService.checkMediaDeletePermission(
+        user,
+        mediaUpload,
+      )
+    ) {
+      this.logger.debug(
+        `Deleting '${filename}' for user '${user.username}'`,
         'deleteMedia',
       );
+      await this.mediaService.deleteFile(mediaUpload);
+    } else {
+      this.logger.warn(
+        `${user.username} tried to delete '${filename}', but is not the owner of upload or connected note`,
+        'deleteMedia',
+      );
+      const mediaUploadNote = await mediaUpload.note;
       throw new PermissionError(
-        `File '${filename}' is not owned by '${username}'`,
+        `Neither file '${filename}' nor note '${
+          mediaUploadNote?.publicId ?? 'unknown'
+        }'is owned by '${user.username}'`,
       );
     }
-    await this.mediaService.deleteFile(mediaUpload);
   }
 }

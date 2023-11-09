@@ -7,8 +7,21 @@ import KatexFrame from './katex-frame'
 import { render } from '@testing-library/react'
 import type { KatexOptions } from 'katex'
 import { default as KatexDefault } from 'katex'
+import type { PropsWithChildren } from 'react'
+import React from 'react'
 
 jest.mock('katex')
+
+jest.mock('../../../components/common/application-error-alert/application-error-alert', () => ({
+  ApplicationErrorAlert: ({ children, ...props }: PropsWithChildren) => (
+    <div>
+      <h3>This is a mock for ApplicationErrorAlert.</h3>
+      Props: <code>{JSON.stringify(props)}</code>
+      Children:
+      <div>{children}</div>
+    </div>
+  )
+}))
 
 describe('katex frame', () => {
   afterAll(() => {

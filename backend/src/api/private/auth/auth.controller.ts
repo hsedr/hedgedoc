@@ -26,9 +26,10 @@ import { RegisterDto } from '../../../identity/local/register.dto';
 import { UpdatePasswordDto } from '../../../identity/local/update-password.dto';
 import { SessionGuard } from '../../../identity/session.guard';
 import { ConsoleLoggerService } from '../../../logger/console-logger.service';
-import { SessionState } from '../../../session/session.service';
+import { SessionState } from '../../../sessions/session.service';
 import { User } from '../../../users/user.entity';
 import { UsersService } from '../../../users/users.service';
+import { makeUsernameLowercase } from '../../../utils/username';
 import { LoginEnabledGuard } from '../../utils/login-enabled.guard';
 import { OpenApi } from '../../utils/openapi.decorator';
 import { RegistrationEnabledGuard } from '../../utils/registration-enabled.guard';
@@ -61,7 +62,6 @@ export class AuthController {
       registerDto.username,
       registerDto.displayName,
     );
-    // ToDo: Figure out how to rollback user if anything with this calls goes wrong
     await this.identityService.createLocalIdentity(user, registerDto.password);
     request.session.username = registerDto.username;
     request.session.authProvider = 'local';
@@ -107,8 +107,8 @@ export class AuthController {
     @Param('ldapIdentifier') ldapIdentifier: string,
     @Body() loginDto: LdapLoginDto,
   ): void {
-    // There is no further testing needed as we only get to this point if LocalAuthGuard was successful
-    request.session.username = loginDto.username;
+    // There is no further testing needed as we only get to this point if LdapAuthGuard was successful
+    request.session.username = makeUsernameLowercase(loginDto.username);
     request.session.authProvider = 'ldap';
   }
 

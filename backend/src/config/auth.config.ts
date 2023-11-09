@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -7,9 +7,10 @@ import { registerAs } from '@nestjs/config';
 import * as fs from 'fs';
 import * as Joi from 'joi';
 
-import { GitlabScope, GitlabVersion } from './gitlab.enum';
+import { GitlabScope } from './gitlab.enum';
 import {
   buildErrorMessage,
+  ensureNoDuplicatesExist,
   parseOptionalNumber,
   replaceAuthErrorsWithEnvironmentVariables,
   toArrayConfig,
@@ -40,22 +41,9 @@ export interface AuthConfig {
     enableRegister: boolean;
     minimalPasswordStrength: number;
   };
-  facebook: {
-    clientID: string;
-    clientSecret: string;
-  };
-  twitter: {
-    consumerKey: string;
-    consumerSecret: string;
-  };
   github: {
     clientID: string;
     clientSecret: string;
-  };
-  dropbox: {
-    clientID: string;
-    clientSecret: string;
-    appKey: string;
   };
   google: {
     clientID: string;
@@ -69,9 +57,7 @@ export interface AuthConfig {
     clientID: string;
     clientSecret: string;
     scope: GitlabScope;
-    version: GitlabVersion;
   }[];
-  // ToDo: tlsOptions exist in config.json.example. See https://nodejs.org/api/tls.html#tls_tls_connect_options_callback
   ldap: LDAPConfig[];
   saml: {
     identifier: string;
@@ -134,28 +120,9 @@ const authSchema = Joi.object({
       .optional()
       .label('HD_AUTH_LOCAL_MINIMAL_PASSWORD_STRENGTH'),
   },
-  facebook: {
-    clientID: Joi.string().optional().label('HD_AUTH_FACEBOOK_CLIENT_ID'),
-    clientSecret: Joi.string()
-      .optional()
-      .label('HD_AUTH_FACEBOOK_CLIENT_SECRET'),
-  },
-  twitter: {
-    consumerKey: Joi.string().optional().label('HD_AUTH_TWITTER_CONSUMER_KEY'),
-    consumerSecret: Joi.string()
-      .optional()
-      .label('HD_AUTH_TWITTER_CONSUMER_SECRET'),
-  },
   github: {
     clientID: Joi.string().optional().label('HD_AUTH_GITHUB_CLIENT_ID'),
     clientSecret: Joi.string().optional().label('HD_AUTH_GITHUB_CLIENT_SECRET'),
-  },
-  dropbox: {
-    clientID: Joi.string().optional().label('HD_AUTH_DROPBOX_CLIENT_ID'),
-    clientSecret: Joi.string()
-      .optional()
-      .label('HD_AUTH_DROPBOX_CLIENT_SECRET'),
-    appKey: Joi.string().optional().label('HD_AUTH_DROPBOX_APP_KEY'),
   },
   google: {
     clientID: Joi.string().optional().label('HD_AUTH_GOOGLE_CLIENT_ID'),
@@ -174,14 +141,9 @@ const authSchema = Joi.object({
           .valid(...Object.values(GitlabScope))
           .default(GitlabScope.READ_USER)
           .optional(),
-        version: Joi.string()
-          .valid(...Object.values(GitlabVersion))
-          .default(GitlabVersion.V4)
-          .optional(),
       }).optional(),
     )
     .optional(),
-  // ToDo: should searchfilter have a default?
   ldap: Joi.array()
     .items(
       Joi.object({
@@ -208,7 +170,6 @@ const authSchema = Joi.object({
         idpSsoUrl: Joi.string(),
         idpCert: Joi.string(),
         clientCert: Joi.string().optional(),
-        // ToDo: (default: config.serverURL) will be build on-the-fly in the config/index.js from domain, urlAddPort and urlPath.
         issuer: Joi.string().optional(),
         identifierFormat: Joi.string()
           .default('urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress')
@@ -249,19 +210,40 @@ const authSchema = Joi.object({
 });
 
 export default registerAs('authConfig', () => {
-  // ToDo: Validate these with Joi to prevent duplicate entries?
   const gitlabNames = (
     toArrayConfig(process.env.HD_AUTH_GITLABS, ',') ?? []
   ).map((name) => name.toUpperCase());
-  const ldapNames = (toArrayConfig(process.env.HD_AUTH_LDAPS, ',') ?? []).map(
-    (name) => name.toUpperCase(),
-  );
+  if (gitlabNames.length !== 0) {
+    throw new Error(
+      "GitLab auth is currently not yet supported. Please don't configure it",
+    );
+  }
+  ensureNoDuplicatesExist('GitLab', gitlabNames);
+
+  const ldapNames = (
+    toArrayConfig(process.env.HD_AUTH_LDAP_SERVERS, ',') ?? []
+  ).map((name) => name.toUpperCase());
+  ensureNoDuplicatesExist('LDAP', ldapNames);
+
   const samlNames = (toArrayConfig(process.env.HD_AUTH_SAMLS, ',') ?? []).map(
     (name) => name.toUpperCase(),
   );
+  if (samlNames.length !== 0) {
+    throw new Error(
+      "SAML auth is currently not yet supported. Please don't configure it",
+    );
+  }
+  ensureNoDuplicatesExist('SAML', samlNames);
+
   const oauth2Names = (
     toArrayConfig(process.env.HD_AUTH_OAUTH2S, ',') ?? []
   ).map((name) => name.toUpperCase());
+  if (oauth2Names.length !== 0) {
+    throw new Error(
+      "OAuth2 auth is currently not yet supported. Please don't configure it",
+    );
+  }
+  ensureNoDuplicatesExist('OAuth2', oauth2Names);
 
   const gitlabs = gitlabNames.map((gitlabName) => {
     return {
@@ -316,6 +298,8 @@ export default registerAs('authConfig', () => {
       idpSsoUrl: process.env[`HD_AUTH_SAML_${samlName}_IDP_SSO_URL`],
       idpCert: process.env[`HD_AUTH_SAML_${samlName}_IDP_CERT`],
       clientCert: process.env[`HD_AUTH_SAML_${samlName}_CLIENT_CERT`],
+      // ToDo: (default: config.serverURL) will be build on-the-fly in the config/index.js from domain, urlAddPort and urlPath.
+      //  https://github.com/hedgedoc/hedgedoc/issues/5043
       issuer: process.env[`HD_AUTH_SAML_${samlName}_ISSUER`],
       identifierFormat:
         process.env[`HD_AUTH_SAML_${samlName}_IDENTIFIER_FORMAT`],
@@ -366,6 +350,25 @@ export default registerAs('authConfig', () => {
     };
   });
 
+  if (
+    process.env.HD_AUTH_GITHUB_CLIENT_ID !== undefined ||
+    process.env.HD_AUTH_GITHUB_CLIENT_SECRET !== undefined
+  ) {
+    throw new Error(
+      "GitHub config is currently not yet supported. Please don't configure it",
+    );
+  }
+
+  if (
+    process.env.HD_AUTH_GOOGLE_CLIENT_ID !== undefined ||
+    process.env.HD_AUTH_GOOGLE_CLIENT_SECRET !== undefined ||
+    process.env.HD_AUTH_GOOGLE_APP_KEY !== undefined
+  ) {
+    throw new Error(
+      "Google config is currently not yet supported. Please don't configure it",
+    );
+  }
+
   const authConfig = authSchema.validate(
     {
       session: {
@@ -379,22 +382,9 @@ export default registerAs('authConfig', () => {
           process.env.HD_AUTH_LOCAL_MINIMAL_PASSWORD_STRENGTH,
         ),
       },
-      facebook: {
-        clientID: process.env.HD_AUTH_FACEBOOK_CLIENT_ID,
-        clientSecret: process.env.HD_AUTH_FACEBOOK_CLIENT_SECRET,
-      },
-      twitter: {
-        consumerKey: process.env.HD_AUTH_TWITTER_CONSUMER_KEY,
-        consumerSecret: process.env.HD_AUTH_TWITTER_CONSUMER_SECRET,
-      },
       github: {
         clientID: process.env.HD_AUTH_GITHUB_CLIENT_ID,
         clientSecret: process.env.HD_AUTH_GITHUB_CLIENT_SECRET,
-      },
-      dropbox: {
-        clientID: process.env.HD_AUTH_DROPBOX_CLIENT_ID,
-        clientSecret: process.env.HD_AUTH_DROPBOX_CLIENT_SECRET,
-        appKey: process.env.HD_AUTH_DROPBOX_APP_KEY,
       },
       google: {
         clientID: process.env.HD_AUTH_GOOGLE_CLIENT_ID,

@@ -1,7 +1,6 @@
 {
   "app": {
-    "slogan": "The best platform to write and share markdown.",
-    "title": "Collaborative markdown notes",
+    "slogan": "Ideas grow better together",
     "icon": "HedgeDoc logo with text"
   },
   "notificationTest": {
@@ -147,17 +146,13 @@
     },
     "footer": {
       "releases": "Releases",
-      "poweredBy": "Powered by <0></0>",
-      "imprint": "Imprint",
-      "followUs": "Follow us on <0></0>, <1></1>, <2></2>, <3></3>, and <4></4>.",
-      "privacy": "Privacy",
-      "termsOfUse": "Terms of Use"
+      "poweredBy": "Powered by <0></0>"
     },
     "versionInfo": {
       "issueTracker": "Found a bug? Fill an issue!",
       "sourceCode": "Read the source code",
-      "versionInfo": "Version info",
-      "title": "You are using"
+      "versionInfo": "Running Version",
+      "title": "Running HedgeDoc on version"
     }
   },
   "profile": {
@@ -234,47 +229,25 @@
     "untitledNote": "Untitled",
     "placeholder": "← Start by entering a title here\n===\nVisit {{host}}features if you don't know what to do.\nHappy hacking :)",
     "infoToc": "Structure your note with headings to see a table-of-contents here.",
-    "help": {
-      "shortcuts": {
-        "title": "Shortcuts",
-        "bold": "Make selection bold",
-        "italic": "Make selection italic",
-        "underline": "Underline selection",
-        "strikethrough": "Strike selection through",
-        "mark": "Mark selection",
-        "link": "Add link around selection",
-        "view": "Show only View",
-        "both": "Show View and Edit",
-        "edit": "Show only Edit"
-      },
-      "links": {
-        "title": "Links"
-      },
-      "contacts": {
-        "title": "Contacts",
-        "community": "Join the community",
-        "meetUsOn": "Meet us on {{service}}",
-        "helpTranslating": "Help us translating",
-        "reportIssue": "Report an issue"
-      },
-      "documents": {
-        "title": "Documents",
-        "yamlMetadata": "YAML Metadata",
-        "slideExample": "Slide Example"
-      }
-    },
     "onlineStatus": {
       "online": "Online",
-      "you": "(You)"
+      "you": "(You)",
+      "guestUser": "This is a guest user",
+      "active": "This user is active",
+      "inactive": "This user has been inactive for some time"
     },
     "error": {
+      "noPermission": {
+        "title": "No edit permission",
+        "description": "You don't have permission to edit this note. Please login and try again"
+      },
       "locked": {
         "title": "This note is locked",
         "description": "Sorry, only the owner can edit this note."
       },
       "limitReached": {
         "title": "Reached the limit",
-        "description": "Sorry, this note reached its maximum length. Notes can be up to {{maxLength}} characters long.",
+        "description": "Sorry, this note reached its maximum length. Notes can be up to {{maxDocumentLength}} characters long.",
         "advice": "Please shorten the note."
       },
       "incompatible": {
@@ -383,19 +356,19 @@
       "tagTime": "Time tag",
       "spoiler": "Spoiler"
     },
+    "noteInfo": {
+      "title": "Note info",
+      "created": "Note created",
+      "lastUpdated": "Last saved at",
+      "lastUpdatedBy": "Last updated by",
+      "contributors": "Count of contributors",
+      "wordCount": "Count of words"
+    },
     "modal": {
       "snippetImport": {
         "title": "Import from Snippet",
         "selectProject": "Select From Available Projects",
         "selectSnippet": "Select From Available Snippets"
-      },
-      "documentInfo": {
-        "title": "Document info",
-        "created": "This note was created <0></0>",
-        "edited": "<0></0> was the last editor <1></1>",
-        "usersContributed": "<0></0> users contributed to this document",
-        "revisions": "<0></0> revisions are saved",
-        "words": "<0></0> words in document"
       },
       "gistImport": {
         "title": "Import from Gist",
@@ -411,7 +384,15 @@
         "error": "An error occurred while fetching the revisions of this note.",
         "errorUser": "An error occurred while fetching the user information for this revision.",
         "length": "Length",
-        "download": "Download selected revision"
+        "download": "Download selected revision",
+        "guestCount": "Anonymous authors or guests"
+      },
+      "deleteRevision": {
+        "title": "Delete Revisions for current note",
+        "question": "Do you really want to remove all the previous revisions except the current of this note?",
+        "warning": "All the previous revisions except the current will be deleted for this note. This process is irreversible.",
+        "error": "An error occurred while deleting revisions of this note.",
+        "button": "Delete Revisions"
       },
       "clipboardImport": {
         "title": "Import from clipboard",
@@ -445,7 +426,8 @@
           "error": "There was an error changing the owner of this note.",
           "placeholder": "Enter username of new note owner",
           "button": "Change the owner of this note"
-        }
+        },
+        "inconsistent": "This permission is overridden by another permission"
       },
       "shareLink": {
         "title": "Share link",
@@ -512,6 +494,41 @@
       "editNote": "Edit this note"
     }
   },
+  "appbar": {
+    "editor": {
+      "readOnly": "read-only"
+    },
+    "help": {
+      "help": {
+        "header": "Help",
+        "shortcuts": "Shortcuts",
+        "cheatsheet": "Cheatsheet"
+      },
+      "instance": {
+        "header": "About this instance",
+        "versionInfo": "Running version",
+        "motdModal": "Show instance announcement"
+      },
+      "legal": {
+        "header": "Legal",
+        "privacy": "Privacy Policy",
+        "termsOfUse": "Terms of use",
+        "imprint": "Imprint"
+      },
+      "project": {
+        "header": "Project",
+        "github": "Project on GitHub",
+        "reportIssue": "Report an issue",
+        "helpTranslating": "Help us translating"
+      },
+      "social": {
+        "header": "Social",
+        "discourse": "Join the community",
+        "matrix": "Chat with us on Matrix",
+        "mastodon": "Follow us on Mastodon"
+      }
+    }
+  },
   "common": {
     "yes": "Yes",
     "no": "No",
@@ -546,6 +563,10 @@
     "signIn": "Sign In",
     "signOut": "Sign Out",
     "logoutFailed": "There was an error logging you out.\nClose your browser window to ensure session data is removed.",
+    "guest": {
+      "title": "Continue as guest",
+      "noteCreationDisabled": "Guest note creation is disabled on this instance. Please log in to create a note."
+    },
     "auth": {
       "email": "Email",
       "password": "Password",
@@ -576,7 +597,7 @@
     }
   },
   "motd": {
-    "title": "Information"
+    "title": "Announcement"
   },
   "errors": {
     "notFound": {
@@ -642,9 +663,27 @@
       }
     }
   },
+  "shortcuts": {
+    "title": "Shortcuts",
+    "editor": {
+      "header": "Editor",
+      "bold": "Make selection bold",
+      "italic": "Make selection italic",
+      "underline": "Underline selection",
+      "strikethrough": "Strike selection through",
+      "mark": "Mark selection",
+      "link": "Add link around selection"
+    },
+    "viewMode": {
+      "header": "View Mode",
+      "view": "Show only View",
+      "both": "Show View and Edit",
+      "edit": "Show only Edit"
+    }
+  },
   "cheatsheet": {
-    "button": "Open Cheatsheet",
-    "modal":{
+    "search": "Search for Cheatsheets",
+    "modal": {
       "popup": "Open in new tab",
       "title": "Cheatsheet",
       "headlines": {
@@ -722,12 +761,12 @@
         "basic": {
           "title": "Basic",
           "description": "Images can be defined using the link syntax with an exclamation mark in front of it. The text in the brackets will be used as alt-text.",
-          "example": "![This is an icon](/icons/apple-touch-icon.png)"
+          "example": "![This is an icon](/icon.png)"
         },
         "size": {
           "title": "Size",
           "description": "The size syntax allows you to set both dimensions of an image. If you omit one of the dimensions then image will be scaled to the relative size.",
-          "example": "![Image](/icons/apple-touch-icon.png =100x50)\n\n![Image](/icons/apple-touch-icon.png =60x)\n\n![Image](/icons/apple-touch-icon.png =x50)"
+          "example": "![Image](/icon.png =100x50)\n\n![Image](/icon.png =60x)\n\n![Image](/icon.png =x50)"
         }
       },
       "links": {
@@ -777,11 +816,11 @@
       "example": "I :heart: :hedgehog:"
     },
     "csv": {
-      "title" : "CSV",
-      "table" : {
+      "title": "CSV",
+      "table": {
         "title": "Table",
-        "description" : "You can render a CSV text as table by using a code block with `csv` as language. You must specify the delimiter.",
-        "example" : "```csv delimiter=;\nUsername; Identifier;First name;Last name\n\"booker12; rbooker\";9012;Rachel;Booker\ngrey07;2070;Laura;Grey\njohnson81;4081;Craig;Johnson\njenkins46;9346;Mary;Jenkins\nsmith79;5079;Jamie;Smith\n```"
+        "description": "You can render a CSV text as table by using a code block with `csv` as language. You must specify the delimiter.",
+        "example": "```csv delimiter=;\nUsername; Identifier;First name;Last name\n\"booker12; rbooker\";9012;Rachel;Booker\ngrey07;2070;Laura;Grey\njohnson81;4081;Craig;Johnson\njenkins46;9346;Mary;Jenkins\nsmith79;5079;Jamie;Smith\n```"
       },
       "header": {
         "title": "Header",

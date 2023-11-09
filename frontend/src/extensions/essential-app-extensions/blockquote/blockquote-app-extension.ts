@@ -1,9 +1,9 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-import type { CheatsheetExtension } from '../../../components/editor-page/cheatsheet/cheatsheet-extension'
+import type { CheatsheetExtension } from '../../../components/cheatsheet/cheatsheet-extension'
 import { basicCompletion } from '../../../components/editor-page/editor-pane/autocompletions/basic-completion'
 import type { MarkdownRendererExtension } from '../../../components/markdown-renderer/extensions/_base-classes/markdown-renderer-extension'
 import { AppExtension } from '../../_base-classes/app-extension'
@@ -22,7 +22,7 @@ export class BlockquoteAppExtension extends AppExtension {
   }
 
   buildCheatsheetExtensions(): CheatsheetExtension[] {
-    return [{ i18nKey: 'blockquoteTags', entries: [{ i18nKey: 'name' }, { i18nKey: 'color' }, { i18nKey: 'time' }] }]
+    return [{ i18nKey: 'blockquoteTags', topics: [{ i18nKey: 'name' }, { i18nKey: 'color' }, { i18nKey: 'time' }] }]
   }
 
   buildAutocompletion(): CompletionSource[] {

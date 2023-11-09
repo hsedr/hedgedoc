@@ -1,10 +1,11 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { HistoryEntryOrigin } from '../../../api/history/types'
 import { useApplicationState } from '../../../hooks/common/use-application-state'
+import { useTranslatedText } from '../../../hooks/common/use-translated-text'
 import { importHistoryEntries, setHistoryEntries } from '../../../redux/history/methods'
 import { UiIcon } from '../../common/icons/ui-icon'
 import { ShowIf } from '../../common/show-if/show-if'
@@ -23,7 +24,7 @@ import { useSyncToolbarStateToUrlEffect } from './toolbar-context/use-sync-toolb
 import React, { useCallback } from 'react'
 import { Button, Col } from 'react-bootstrap'
 import { CloudUpload as IconCloudUpload } from 'react-bootstrap-icons'
-import { useTranslation } from 'react-i18next'
+import { useIsLoggedIn } from '../../../hooks/common/use-is-logged-in'
 
 export enum ViewStateEnum {
   CARD,
@@ -34,9 +35,8 @@ export enum ViewStateEnum {
  * Renders the toolbar for the history page that contains controls for filtering and sorting.
  */
 export const HistoryToolbar: React.FC = () => {
-  const { t } = useTranslation()
   const historyEntries = useApplicationState((state) => state.history)
-  const userExists = useApplicationState((state) => !!state.user)
+  const userExists = useIsLoggedIn()
   const { showErrorNotification } = useUiNotifications()
   const safeRefreshHistoryState = useSafeRefreshHistoryStateCallback()
   useSyncToolbarStateToUrlEffect()
@@ -61,8 +61,10 @@ export const HistoryToolbar: React.FC = () => {
     })
   }, [userExists, historyEntries, showErrorNotification, safeRefreshHistoryState])
 
+  const uploadAllButtonTitle = useTranslatedText('landing.history.toolbar.uploadAll')
+
   return (
-    <Col className={'d-flex flex-row'}>
+    <Col className={'d-flex flex-row flex-wrap'}>
       <div className={'me-1 mb-1'}>
         <TagSelectionInput />
       </div>
@@ -89,10 +91,7 @@ export const HistoryToolbar: React.FC = () => {
       </div>
       <ShowIf condition={userExists}>
         <div className={'me-1 mb-1'}>
-          <Button
-            variant={'light'}
-            title={t('landing.history.toolbar.uploadAll') ?? undefined}
-            onClick={onUploadAllToRemote}>
+          <Button variant={'secondary'} title={uploadAllButtonTitle} onClick={onUploadAllToRemote}>
             <UiIcon icon={IconCloudUpload} />
           </Button>
         </div>

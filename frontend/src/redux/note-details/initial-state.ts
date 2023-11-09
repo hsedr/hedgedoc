@@ -4,16 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import type { NoteDetails } from './types/note-details'
-import { NoteTextDirection, NoteType } from '@hedgedoc/commons'
-import type { SlideOptions } from '@hedgedoc/commons'
-
-export const initialSlideOptions: SlideOptions = {
-  transition: 'zoom',
-  autoSlide: 0,
-  autoSlideStoppable: true,
-  backgroundTransition: 'fade',
-  slideNumber: false
-}
+import { defaultNoteFrontmatter } from '@hedgedoc/commons'
 
 export const initialState: NoteDetails = {
   updateUsername: null,
@@ -25,11 +16,7 @@ export const initialState: NoteDetails = {
   },
   selection: { from: 0 },
   rawFrontmatter: '',
-  frontmatterRendererInfo: {
-    frontmatterInvalid: false,
-    lineOffset: 0,
-    slideOptions: initialSlideOptions
-  },
+  startOfContentLineOffset: 0,
   id: '',
   createdAt: 0,
   updatedAt: 0,
@@ -44,19 +31,5 @@ export const initialState: NoteDetails = {
   editedBy: [],
   title: '',
   firstHeading: '',
-  frontmatter: {
-    title: '',
-    description: '',
-    tags: [],
-    robots: '',
-    lang: 'en',
-    dir: NoteTextDirection.LTR,
-    newlinesAreBreaks: true,
-    GA: '',
-    disqus: '',
-    license: '',
-    type: NoteType.DOCUMENT,
-    opengraph: {},
-    slideOptions: initialSlideOptions
-  }
+  frontmatter: defaultNoteFrontmatter
 }

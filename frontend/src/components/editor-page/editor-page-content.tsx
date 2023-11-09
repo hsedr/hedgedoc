@@ -1,27 +1,21 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-import { useApplicationState } from '../../hooks/common/use-application-state'
-import { useApplyDarkMode } from '../../hooks/common/use-apply-dark-mode'
-import { Logger } from '../../utils/logger'
-import { MotdModal } from '../common/motd-modal/motd-modal'
 import { CommunicatorImageLightbox } from '../markdown-renderer/extensions/image/communicator-image-lightbox'
 import { ExtensionEventEmitterProvider } from '../markdown-renderer/hooks/use-extension-event-emitter'
-import { AppBar, AppBarMode } from './app-bar/app-bar'
 import { ChangeEditorContentContextProvider } from './change-content-context/codemirror-reference-context'
-import { EditorDocumentRenderer } from './editor-document-renderer/editor-document-renderer'
 import { EditorPane } from './editor-pane/editor-pane'
 import { useComponentsFromAppExtensions } from './editor-pane/hooks/use-components-from-app-extensions'
-import { HeadMetaProperties } from './head-meta-properties/head-meta-properties'
+import { useNoteAndAppTitle } from './head-meta-properties/use-note-and-app-title'
+import { useScrollState } from './hooks/use-scroll-state'
+import { useSetScrollSource } from './hooks/use-set-scroll-source'
 import { useUpdateLocalHistoryEntry } from './hooks/use-update-local-history-entry'
-import { RealtimeConnectionAlert } from './realtime-connection-alert/realtime-connection-alert'
+import { RendererPane } from './renderer-pane/renderer-pane'
 import { Sidebar } from './sidebar/sidebar'
 import { Splitter } from './splitter/splitter'
-import type { DualScrollState, ScrollState } from './synced-scroll/scroll-props'
-import equal from 'fast-deep-equal'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export enum ScrollSource {
@@ -29,115 +23,58 @@ export enum ScrollSource {
   RENDERER = 'renderer'
 }
 
-const log = new Logger('EditorPage')
-
 /**
  * This is the content of the actual editor page.
  */
 export const EditorPageContent: React.FC = () => {
   useTranslation()
-  const scrollSource = useRef<ScrollSource>(ScrollSource.EDITOR)
-  const editorSyncScroll: boolean = useApplicationState((state) => state.editorConfig.syncScroll)
 
-  const [scrollState, setScrollState] = useState<DualScrollState>(() => ({
-    editorScrollState: { firstLineInView: 1, scrolledPercentage: 0 },
-    rendererScrollState: { firstLineInView: 1, scrolledPercentage: 0 }
-  }))
-
-  const onMarkdownRendererScroll = useCallback(
-    (newScrollState: ScrollState) => {
-      if (scrollSource.current === ScrollSource.RENDERER && editorSyncScroll) {
-        setScrollState((old) => {
-          const newState: DualScrollState = {
-            editorScrollState: newScrollState,
-            rendererScrollState: old.rendererScrollState
-          }
-          return equal(newState, old) ? old : newState
-        })
-      }
-    },
-    [editorSyncScroll]
-  )
-
-  useEffect(() => {
-    log.debug('New scroll state', scrollState, scrollSource.current)
-  }, [scrollState])
-
-  const onEditorScroll = useCallback(
-    (newScrollState: ScrollState) => {
-      if (scrollSource.current === ScrollSource.EDITOR && editorSyncScroll) {
-        setScrollState((old) => {
-          const newState: DualScrollState = {
-            rendererScrollState: newScrollState,
-            editorScrollState: old.editorScrollState
-          }
-          return equal(newState, old) ? old : newState
-        })
-      }
-    },
-    [editorSyncScroll]
-  )
-
-  useApplyDarkMode()
   useUpdateLocalHistoryEntry()
 
-  const setRendererToScrollSource = useCallback(() => {
-    if (scrollSource.current !== ScrollSource.RENDERER) {
-      scrollSource.current = ScrollSource.RENDERER
-      log.debug('Make renderer scroll source')
-    }
-  }, [])
-
-  const setEditorToScrollSource = useCallback(() => {
-    if (scrollSource.current !== ScrollSource.EDITOR) {
-      scrollSource.current = ScrollSource.EDITOR
-      log.debug('Make editor scroll source')
-    }
-  }, [])
+  const scrollSource = useRef<ScrollSource>(ScrollSource.EDITOR)
+  const [editorScrollState, onMarkdownRendererScroll] = useScrollState(scrollSource, ScrollSource.EDITOR)
+  const [rendererScrollState, onEditorScroll] = useScrollState(scrollSource, ScrollSource.RENDERER)
+  const setRendererToScrollSource = useSetScrollSource(scrollSource, ScrollSource.RENDERER)
+  const setEditorToScrollSource = useSetScrollSource(scrollSource, ScrollSource.EDITOR)
 
   const leftPane = useMemo(
     () => (
       <EditorPane
-        scrollState={scrollState.editorScrollState}
+        scrollState={editorScrollState}
         onScroll={onEditorScroll}
         onMakeScrollSource={setEditorToScrollSource}
       />
     ),
-    [onEditorScroll, scrollState.editorScrollState, setEditorToScrollSource]
+    [onEditorScroll, editorScrollState, setEditorToScrollSource]
   )
 
   const rightPane = useMemo(
     () => (
-      <EditorDocumentRenderer
+      <RendererPane
         frameClasses={'h-100 w-100'}
         onMakeScrollSource={setRendererToScrollSource}
         onScroll={onMarkdownRendererScroll}
-        scrollState={scrollState.rendererScrollState}
+        scrollState={rendererScrollState}
       />
     ),
-    [onMarkdownRendererScroll, scrollState.rendererScrollState, setRendererToScrollSource]
+    [onMarkdownRendererScroll, rendererScrollState, setRendererToScrollSource]
   )
 
   const editorExtensionComponents = useComponentsFromAppExtensions()
+  useNoteAndAppTitle()
 
   return (
     <ChangeEditorContentContextProvider>
       <ExtensionEventEmitterProvider>
         {editorExtensionComponents}
         <CommunicatorImageLightbox />
-        <HeadMetaProperties />
-        <MotdModal />
-        <div className={'d-flex flex-column vh-100'}>
-          <AppBar mode={AppBarMode.EDITOR} />
-          <RealtimeConnectionAlert />
-          <div className={'flex-fill d-flex h-100 w-100 overflow-hidden flex-row'}>
-            <Splitter
-              left={leftPane}
-              right={rightPane}
-              additionalContainerClassName={'overflow-hidden position-relative'}
-            />
-            <Sidebar />
-          </div>
+        <div className={'flex-fill d-flex h-100 w-100 overflow-hidden flex-row'}>
+          <Splitter
+            left={leftPane}
+            right={rightPane}
+            additionalContainerClassName={'overflow-hidden position-relative'}
+          />
+          <Sidebar />
         </div>
       </ExtensionEventEmitterProvider>
     </ChangeEditorContentContextProvider>

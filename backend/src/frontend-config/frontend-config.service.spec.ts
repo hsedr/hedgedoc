@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -12,7 +12,7 @@ import { AuthConfig } from '../config/auth.config';
 import { CustomizationConfig } from '../config/customization.config';
 import { DefaultAccessLevel } from '../config/default-access-level.enum';
 import { ExternalServicesConfig } from '../config/external-services.config';
-import { GitlabScope, GitlabVersion } from '../config/gitlab.enum';
+import { GitlabScope } from '../config/gitlab.enum';
 import { GuestAccess } from '../config/guest_access.enum';
 import { Loglevel } from '../config/loglevel.enum';
 import { NoteConfig } from '../config/note.config';
@@ -37,22 +37,9 @@ describe('FrontendConfigService', () => {
       enableRegister: false,
       minimalPasswordStrength: 2,
     },
-    facebook: {
-      clientID: undefined,
-      clientSecret: undefined,
-    },
-    twitter: {
-      consumerKey: undefined,
-      consumerSecret: undefined,
-    },
     github: {
       clientID: undefined,
       clientSecret: undefined,
-    },
-    dropbox: {
-      clientID: undefined,
-      clientSecret: undefined,
-      appKey: undefined,
     },
     google: {
       clientID: undefined,
@@ -66,22 +53,9 @@ describe('FrontendConfigService', () => {
   };
 
   describe('getAuthProviders', () => {
-    const facebook: AuthConfig['facebook'] = {
-      clientID: 'facebookTestId',
-      clientSecret: 'facebookTestSecret',
-    };
-    const twitter: AuthConfig['twitter'] = {
-      consumerKey: 'twitterTestId',
-      consumerSecret: 'twitterTestSecret',
-    };
     const github: AuthConfig['github'] = {
       clientID: 'githubTestId',
       clientSecret: 'githubTestSecret',
-    };
-    const dropbox: AuthConfig['dropbox'] = {
-      clientID: 'dropboxTestId',
-      clientSecret: 'dropboxTestSecret',
-      appKey: 'dropboxTestKey',
     };
     const google: AuthConfig['google'] = {
       clientID: 'googleTestId',
@@ -96,7 +70,6 @@ describe('FrontendConfigService', () => {
         clientID: 'gitlabTestId',
         clientSecret: 'gitlabTestSecret',
         scope: GitlabScope.API,
-        version: GitlabVersion.V4,
       },
     ];
     const ldap: AuthConfig['ldap'] = [
@@ -155,10 +128,7 @@ describe('FrontendConfigService', () => {
       },
     ];
     for (const authConfigConfigured of [
-      facebook,
-      twitter,
       github,
-      dropbox,
       google,
       gitlab,
       ldap,
@@ -171,6 +141,7 @@ describe('FrontendConfigService', () => {
           rendererBaseUrl: 'https://renderer.example.org',
           port: 3000,
           loglevel: Loglevel.ERROR,
+          showLogTimestamp: false,
           persistInterval: 10,
         };
         const authConfig: AuthConfig = {
@@ -211,16 +182,6 @@ describe('FrontendConfigService', () => {
         }).compile();
         const service = module.get(FrontendConfigService);
         const config = await service.getFrontendConfig();
-        if (authConfig.dropbox.clientID) {
-          expect(config.authProviders).toContainEqual({
-            type: AuthProviderType.DROPBOX,
-          });
-        }
-        if (authConfig.facebook.clientID) {
-          expect(config.authProviders).toContainEqual({
-            type: AuthProviderType.FACEBOOK,
-          });
-        }
         if (authConfig.google.clientID) {
           expect(config.authProviders).toContainEqual({
             type: AuthProviderType.GOOGLE,
@@ -234,11 +195,6 @@ describe('FrontendConfigService', () => {
         if (authConfig.local.enableLogin) {
           expect(config.authProviders).toContainEqual({
             type: AuthProviderType.LOCAL,
-          });
-        }
-        if (authConfig.twitter.consumerKey) {
-          expect(config.authProviders).toContainEqual({
-            type: AuthProviderType.TWITTER,
           });
         }
         expect(
@@ -329,6 +285,7 @@ describe('FrontendConfigService', () => {
                 rendererBaseUrl: 'https://renderer.example.org',
                 port: 3000,
                 loglevel: Loglevel.ERROR,
+                showLogTimestamp: false,
                 persistInterval: 10,
               };
               const authConfig: AuthConfig = {

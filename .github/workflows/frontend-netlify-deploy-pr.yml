@@ -29,7 +29,7 @@ permissions:
 env:
   NETLIFY_VERSION: 13.2.2
   NETLIFY_NEXTJS_PLUGIN_VERSION: 4.33.0
-  NODEJS_VERSION: 18
+  NODEJS_VERSION: 20
 
 defaults:
   run:
@@ -48,7 +48,7 @@ jobs:
       DEPLOY_URL: "https://${{ github.event.number }}--hedgedoc-ui-test.netlify.app/"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
@@ -67,7 +67,7 @@ jobs:
         run: echo "HD_BASE_URL=\"${{ env.DEPLOY_URL }}\"" >> .env.production
 
       - name: Build app
-        run: yarn turbo run build --filter=frontend
+        run: yarn build --filter=frontend
         shell: bash
         working-directory: .
         env:

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -8,9 +8,14 @@ import { HttpMethod, respondToMatchingRequest } from '../../../../handler-utils/
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 const handler = (req: NextApiRequest, res: NextApiResponse): void => {
+  const cookieSet = req.headers?.['cookie']?.split(';').find((value) => value.trim() === 'mock-session=1') !== undefined
+  if (!cookieSet) {
+    res.status(403).json({})
+    return
+  }
   respondToMatchingRequest<LoginUserInfo>(HttpMethod.GET, req, res, {
     username: 'mock',
-    photo: 'public/img/avatar.png',
+    photoUrl: '/public/img/avatar.png',
     displayName: 'Mock User',
     authProvider: 'local',
     email: 'mock@hedgedoc.test'

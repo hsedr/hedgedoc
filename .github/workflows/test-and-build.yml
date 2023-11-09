@@ -19,14 +19,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [ '16', '18' ] # Are you changing this? Don't forget to update the min. and recommended node version in getting-started.md!
+        node: [ '18', '20' ] # Are you changing this? Don't forget to update the min. and recommended node version in getting-started.md!
         include:
-          - node: '18'
+          - node: '20'
             coverage: true
     name: Test and build with NodeJS ${{ matrix.node }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup node
         uses: ./.github/actions/setup-node
@@ -34,7 +34,7 @@ jobs:
           NODEJS_VERSION: ${{ matrix.node }}
 
       - name: Build project
-        run: yarn turbo run build
+        run: yarn build
         shell: bash
         env:
           NODEJS_VERSION: ${{ matrix.node }}
@@ -43,7 +43,7 @@ jobs:
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
       - name: Test Project
-        run: yarn turbo run test:ci
+        run: yarn test:ci
         shell: bash
         env:
           NODEJS_VERSION: ${{ matrix.node }}
@@ -51,9 +51,16 @@ jobs:
           TURBO_API: ${{ vars.TURBO_API }}
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
-      - name: Upload coverage
+      - name: Upload backend coverage
         if: "${{ matrix.coverage == true }}"
-        uses: codecov/codecov-action@40a12dcee2df644d47232dde008099a3e9e4f865 # v3.1.2
+        uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
         with:
           directory: backend/coverage
-          flags: integration-tests
+          flags: backend, unit-tests, backend-unit-tests
+
+      - name: Upload frontend coverage
+        if: "${{ matrix.coverage == true }}"
+        uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
+        with:
+          directory: frontend/coverage
+          flags: frontend, unit-tests, frontend-unit-tests

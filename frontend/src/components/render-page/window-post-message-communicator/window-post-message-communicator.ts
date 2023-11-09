@@ -39,17 +39,20 @@ export abstract class WindowPostMessageCommunicator<
   private readonly log: Logger
   private readonly boundListener: (event: MessageEvent) => void
 
-  public constructor(private readonly uuid: string, private readonly targetOrigin: string) {
+  public constructor(
+    private readonly uuid: string,
+    private readonly targetOrigin: string
+  ) {
     this.boundListener = this.handleEvent.bind(this)
     this.communicationEnabled = false
-    this.log = this.createLogger()
+    this.log = this.createLogger(uuid)
   }
 
   public getUuid(): string {
     return this.uuid
   }
 
-  protected abstract createLogger(): Logger
+  protected abstract createLogger(uuid: string): Logger
 
   /**
    * Registers the event listener on the current global {@link window}.

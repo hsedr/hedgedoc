@@ -5,69 +5,47 @@
  */
 import type { BaseUrls } from '../components/common/base-url/base-url-context-provider'
 import { Logger } from './logger'
-import { isTestMode } from './test-modes'
-import { MissingTrailingSlashError, parseUrl } from '@hedgedoc/commons'
+import { isTestMode, isBuildTime } from './test-modes'
+import { parseUrl } from '@hedgedoc/commons'
 import { Optional } from '@mrdrogdrog/optional'
 
 /**
- * Extracts the editor and renderer base urls from the environment variables.
+ * Extracts and caches the editor and renderer base urls from the environment variables.
  */
 export class BaseUrlFromEnvExtractor {
-  private baseUrls: Optional<BaseUrls> | undefined
+  private baseUrls: BaseUrls | undefined
   private readonly logger = new Logger('Base URL Configuration')
 
-  private extractUrlFromEnvVar(envVarName: string, envVarValue: string | undefined): Optional<URL> {
-    try {
-      return parseUrl(envVarValue)
-    } catch (error) {
-      if (error instanceof MissingTrailingSlashError) {
-        this.logger.error(`The path in ${envVarName} must end with an '/'`)
-        return Optional.empty()
-      } else {
-        throw error
-      }
-    }
+  private extractUrlFromEnvVar(envVarValue: string | undefined): Optional<URL> {
+    return parseUrl(envVarValue).orThrow(() => new Error(`${envVarValue} isn't a valid URL`))
   }
 
-  private extractEditorBaseUrlFromEnv(): Optional<URL> {
-    const envValue = this.extractUrlFromEnvVar('HD_BASE_URL', process.env.HD_BASE_URL)
-    if (envValue.isEmpty()) {
-      this.logger.error("HD_BASE_URL isn't a valid URL!")
-    }
-    return envValue
-  }
-
-  private extractRendererBaseUrlFromEnv(editorBaseUrl: URL): Optional<URL> {
+  private extractUrlFromEnv(envVarName: string): Optional<URL> {
     if (isTestMode) {
-      this.logger.info('Test mode activated. Using editor base url for renderer.')
-      return Optional.of(editorBaseUrl)
+      this.logger.info(`Test mode activated. Using editor base url for ${envVarName}.`)
+      return Optional.empty()
     }
 
-    if (!process.env.HD_RENDERER_BASE_URL) {
-      this.logger.info('HD_RENDERER_BASE_URL is unset. Using editor base url for renderer.')
-      return Optional.of(editorBaseUrl)
+    if (!process.env[envVarName]) {
+      this.logger.info(`${envVarName} is unset.`)
+      return Optional.empty()
     }
 
-    return this.extractUrlFromEnvVar('HD_RENDERER_BASE_URL', process.env.HD_RENDERER_BASE_URL)
+    return this.extractUrlFromEnvVar(process.env[envVarName])
   }
 
-  private renewBaseUrls(): void {
-    this.baseUrls = this.extractEditorBaseUrlFromEnv().flatMap((editorBaseUrl) =>
-      this.extractRendererBaseUrlFromEnv(editorBaseUrl).map((rendererBaseUrl) => {
+  private renewBaseUrls(): BaseUrls {
+    return this.extractUrlFromEnvVar(process.env.HD_BASE_URL)
+      .map((editorBaseUrl) => {
+        const rendererBaseUrl = this.extractUrlFromEnv('HD_RENDERER_BASE_URL').orElse(editorBaseUrl)
+        const internalApiUrl = this.extractUrlFromEnv('HD_INTERNAL_API_URL').orElse(undefined)
         return {
           editor: editorBaseUrl.toString(),
-          renderer: rendererBaseUrl.toString()
-        }
+          renderer: rendererBaseUrl.toString(),
+          internalApiUrl: internalApiUrl?.toString()
+        } as BaseUrls
       })
-    )
-    this.baseUrls.ifPresent((urls) => {
-      this.logger.info('Editor base URL', urls.editor.toString())
-      this.logger.info('Renderer base URL', urls.renderer.toString())
-    })
-  }
-
-  private isEnvironmentExtractDone(): boolean {
-    return this.baseUrls !== undefined
+      .orElseThrow(() => new Error("couldn't parse env"))
   }
 
   /**
@@ -75,10 +53,32 @@ export class BaseUrlFromEnvExtractor {
    *
    * @return An {@link Optional} with the base urls.
    */
-  public extractBaseUrls(): Optional<BaseUrls> {
-    if (!this.isEnvironmentExtractDone()) {
-      this.renewBaseUrls()
+  public extractBaseUrls(): BaseUrls {
+    if (isBuildTime) {
+      return {
+        editor: 'https://example.org/',
+        renderer: 'https://example.org/',
+        internalApiUrl: 'https://example.org/'
+      }
     }
-    return Optional.ofNullable(this.baseUrls).flatMap((value) => value)
+
+    if (this.baseUrls === undefined) {
+      this.baseUrls = this.renewBaseUrls()
+      this.logBaseUrls()
+    }
+    return this.baseUrls
+  }
+
+  private logBaseUrls() {
+    if (this.baseUrls === undefined) {
+      return
+    }
+    this.logger.info('Editor base URL', this.baseUrls.editor.toString())
+    this.logger.info('Renderer base URL', this.baseUrls.renderer.toString())
+    if (this.baseUrls.internalApiUrl !== undefined) {
+      this.logger.info('Internal API URL', this.baseUrls.internalApiUrl?.toString())
+    }
   }
 }
+
+export const baseUrlFromEnvExtractor = new BaseUrlFromEnvExtractor()

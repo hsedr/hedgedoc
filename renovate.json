@@ -1,6 +1,6 @@
 {
   "extends": [
-    "config:base",
+    "config:js-app",
     "group:definitelyTyped",
     "group:socketio",
     "group:linters",
@@ -76,9 +76,26 @@
       "matchPackagePatterns": [
         "^@testing-library/"
       ]
+    },
+    {
+      "groupName": "zxcvbn-ts",
+      "matchPackagePatterns": [
+        "^@zxcvbn-ts/"
+      ]
     }
   ],
   "regexManagers": [
+    {
+      "fileMatch": [
+        "\\.yml$",
+        "\\.yaml$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s+\\S+:\\s+\"?(?<currentValue>[^\"]*?)\"?\\s"
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
     {
       "fileMatch": [
         ".github/workflows/frontend-netlify-deploy-main.yml$",
@@ -111,6 +128,16 @@
       ],
       "datasourceTemplate": "node",
       "depNameTemplate": "node version in workflows"
+    },
+    {
+      "fileMatch": [
+        "package.json"
+      ],
+      "matchStrings": [
+        "yjs@(?:npm%3A)?(?<currentValue>[\\d\\.]+)"
+      ],
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "yjs"
     }
   ]
 }

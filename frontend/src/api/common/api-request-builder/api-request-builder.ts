@@ -8,6 +8,7 @@ import type { ApiErrorResponse } from '../api-error-response'
 import { ApiResponse } from '../api-response'
 import { defaultConfig, defaultHeaders } from '../default-config'
 import deepmerge from 'deepmerge'
+import { baseUrlFromEnvExtractor } from '../../../utils/base-url-from-env-extractor'
 
 /**
  * Builder to construct and execute a call to the HTTP API.
@@ -27,7 +28,31 @@ export abstract class ApiRequestBuilder<ResponseType> {
    * @param baseUrl An optional base URL that is used for the endpoint
    */
   constructor(endpoint: string, baseUrl?: string) {
-    this.targetUrl = `${baseUrl ?? ''}api/private/${endpoint}`
+    const actualBaseUrl = this.determineBaseUrl(baseUrl)
+
+    this.targetUrl = `${actualBaseUrl}api/private/${endpoint}`
+  }
+
+  /**
+   * Determines the API base URL by checking if the request is made on the server or client
+   *
+   * @return the base url
+   */
+  private determineBaseUrl(baseUrl?: string) {
+    if (this.isSSR()) {
+      const internalApiUrl = baseUrlFromEnvExtractor.extractBaseUrls().internalApiUrl
+      const actualBaseUrl = internalApiUrl ?? baseUrl
+      if (actualBaseUrl === undefined) {
+        throw new Error("Can't make request without forced base url and without internal api url")
+      }
+      return actualBaseUrl
+    } else {
+      return baseUrl ?? '/'
+    }
+  }
+
+  private isSSR() {
+    return typeof window === 'undefined'
   }
 
   protected async sendRequestAndVerifyResponse(httpMethod: RequestInit['method']): Promise<ApiResponse<ResponseType>> {

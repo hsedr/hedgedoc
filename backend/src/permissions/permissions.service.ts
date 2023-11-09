@@ -8,24 +8,25 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import {
-  getGuestAccessOrdinal,
-  GuestAccess,
-} from '../config/guest_access.enum';
+import { GuestAccess } from '../config/guest_access.enum';
 import noteConfiguration, { NoteConfig } from '../config/note.config';
 import { PermissionsUpdateInconsistentError } from '../errors/errors';
 import { NoteEvent, NoteEventMap } from '../events';
 import { Group } from '../groups/group.entity';
 import { GroupsService } from '../groups/groups.service';
-import { SpecialGroup } from '../groups/groups.special';
 import { ConsoleLoggerService } from '../logger/console-logger.service';
+import { MediaUpload } from '../media/media-upload.entity';
 import { NotePermissionsUpdateDto } from '../notes/note-permissions.dto';
 import { Note } from '../notes/note.entity';
 import { User } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
 import { checkArrayForDuplicates } from '../utils/arrayDuplicatCheck';
 import { NoteGroupPermission } from './note-group-permission.entity';
+import { NotePermission } from './note-permission.enum';
 import { NoteUserPermission } from './note-user-permission.entity';
+import { convertGuestAccessToNotePermission } from './utils/convert-guest-access-to-note-permission';
+import { findHighestNotePermissionByGroup } from './utils/find-highest-note-permission-by-group';
+import { findHighestNotePermissionByUser } from './utils/find-highest-note-permission-by-user';
 
 @Injectable()
 export class PermissionsService {
@@ -39,36 +40,17 @@ export class PermissionsService {
     private eventEmitter: EventEmitter2<NoteEventMap>,
   ) {}
 
-  /**
-   * Checks if the given {@link User} is allowed to read the given {@link Note}.
-   *
-   * @async
-   * @param {User} user - The user whose permission should be checked. Value is null if guest access should be checked
-   * @param {Note} note - The note for which the permission should be checked
-   * @return if the user is allowed to read the note
-   */
-  public async mayRead(user: User | null, note: Note): Promise<boolean> {
-    return (
-      (await this.isOwner(user, note)) ||
-      (await this.hasPermissionUser(user, note, false)) ||
-      (await this.hasPermissionGroup(user, note, false))
-    );
-  }
+  public async checkMediaDeletePermission(
+    user: User,
+    mediaUpload: MediaUpload,
+  ): Promise<boolean> {
+    const mediaUploadNote = await mediaUpload.note;
+    const mediaUploadOwner = await mediaUpload.user;
 
-  /**
-   * Checks if the given {@link User} is allowed to edit the given {@link Note}.
-   *
-   * @async
-   * @param {User} user - The user whose permission should be checked
-   * @param {Note} note - The note for which the permission should be checked. Value is null if guest access should be checked
-   * @return if the user is allowed to edit the note
-   */
-  public async mayWrite(user: User | null, note: Note): Promise<boolean> {
-    return (
-      (await this.isOwner(user, note)) ||
-      (await this.hasPermissionUser(user, note, true)) ||
-      (await this.hasPermissionGroup(user, note, true))
-    );
+    const owner =
+      !!mediaUploadNote && (await this.isOwner(user, mediaUploadNote));
+
+    return mediaUploadOwner?.id === user.id || owner;
   }
 
   /**
@@ -79,82 +61,85 @@ export class PermissionsService {
    * @return if the user is allowed to create notes
    */
   public mayCreate(user: User | null): boolean {
-    return user !== null || this.noteConfig.guestAccess === GuestAccess.CREATE;
+    return !!user || this.noteConfig.guestAccess === GuestAccess.CREATE;
   }
 
   async isOwner(user: User | null, note: Note): Promise<boolean> {
-    if (!user) return false;
-    const owner = await note.owner;
-    if (!owner) return false;
-    return owner.id === user.id;
-  }
-
-  // noinspection JSMethodCanBeStatic
-  private async hasPermissionUser(
-    user: User | null,
-    note: Note,
-    wantEdit: boolean,
-  ): Promise<boolean> {
     if (!user) {
       return false;
     }
-    for (const userPermission of await note.userPermissions) {
-      if (
-        (await userPermission.user).id === user.id &&
-        (userPermission.canEdit || !wantEdit)
-      ) {
-        return true;
-      }
+    const owner = await note.owner;
+    if (!owner) {
+      return false;
     }
-    return false;
+    return owner.id === user.id;
   }
 
-  private async hasPermissionGroup(
+  /**
+   * Determines the {@link NotePermission permission} of the user on the given {@link Note}.
+   *
+   * @param {User | null} user The user whose permission should be checked
+   * @param {Note} note The note that is accessed by the given user
+   * @return {Promise<NotePermission>} The determined permission
+   */
+  public async determinePermission(
     user: User | null,
     note: Note,
-    wantEdit: boolean,
-  ): Promise<boolean> {
+  ): Promise<NotePermission> {
     if (user === null) {
-      if (
-        (!wantEdit &&
-          getGuestAccessOrdinal(this.noteConfig.guestAccess) <
-            getGuestAccessOrdinal(GuestAccess.READ)) ||
-        (wantEdit &&
-          getGuestAccessOrdinal(this.noteConfig.guestAccess) <
-            getGuestAccessOrdinal(GuestAccess.WRITE))
-      ) {
-        return false;
-      }
+      return await this.findGuestNotePermission(await note.groupPermissions);
     }
 
-    for (const groupPermission of await note.groupPermissions) {
-      if (groupPermission.canEdit || !wantEdit) {
-        // Handle special groups
-        if ((await groupPermission.group).special) {
-          if (
-            (user &&
-              (await groupPermission.group).name == SpecialGroup.LOGGED_IN) ||
-            (await groupPermission.group).name == SpecialGroup.EVERYONE
-          ) {
-            return true;
-          }
-        } else {
-          // Handle normal groups
-          if (user) {
-            for (const member of await (
-              await groupPermission.group
-            ).members) {
-              if (member.id === user.id) return true;
-            }
-          }
-        }
-      }
+    if (await this.isOwner(user, note)) {
+      return NotePermission.OWNER;
     }
-    return false;
+    const userPermission = await findHighestNotePermissionByUser(
+      user,
+      await note.userPermissions,
+    );
+    if (userPermission === NotePermission.WRITE) {
+      return userPermission;
+    }
+    const groupPermission = await findHighestNotePermissionByGroup(
+      user,
+      await note.groupPermissions,
+    );
+    return groupPermission > userPermission ? groupPermission : userPermission;
   }
 
-  private notifyOthers(noteId: Note['id']): void {
-    this.eventEmitter.emit(NoteEvent.PERMISSION_CHANGE, noteId);
+  private async findGuestNotePermission(
+    groupPermissions: NoteGroupPermission[],
+  ): Promise<NotePermission> {
+    if (this.noteConfig.guestAccess === GuestAccess.DENY) {
+      return NotePermission.DENY;
+    }
+
+    const everyonePermission = await this.findPermissionForGroup(
+      groupPermissions,
+      await this.groupsService.getEveryoneGroup(),
+    );
+    if (everyonePermission === undefined) {
+      return NotePermission.DENY;
+    }
+    const notePermission = everyonePermission.canEdit
+      ? NotePermission.WRITE
+      : NotePermission.READ;
+    return this.limitNotePermissionToGuestAccessLevel(notePermission);
+  }
+
+  private limitNotePermissionToGuestAccessLevel(
+    notePermission: NotePermission,
+  ): NotePermission {
+    const configuredGuestNotePermission = convertGuestAccessToNotePermission(
+      this.noteConfig.guestAccess,
+    );
+    return configuredGuestNotePermission < notePermission
+      ? configuredGuestNotePermission
+      : notePermission;
+  }
+
+  private notifyOthers(note: Note): void {
+    this.eventEmitter.emit(NoteEvent.PERMISSION_CHANGE, note);
   }
 
   /**
@@ -218,7 +203,7 @@ export class PermissionsService {
       createdPermission.note = Promise.resolve(note);
       (await note.groupPermissions).push(createdPermission);
     }
-    this.notifyOthers(note.id);
+    this.notifyOthers(note);
     return await this.noteRepository.save(note);
   }
 
@@ -235,6 +220,9 @@ export class PermissionsService {
     permissionUser: User,
     canEdit: boolean,
   ): Promise<Note> {
+    if (await this.isOwner(permissionUser, note)) {
+      return note;
+    }
     const permissions = await note.userPermissions;
     const permission = await this.findPermissionForUser(
       permissions,
@@ -250,7 +238,7 @@ export class PermissionsService {
       );
       (await note.userPermissions).push(noteUserPermission);
     }
-    this.notifyOthers(note.id);
+    this.notifyOthers(note);
     return await this.noteRepository.save(note);
   }
 
@@ -282,7 +270,7 @@ export class PermissionsService {
       }
     }
     note.userPermissions = Promise.resolve(newPermissions);
-    this.notifyOthers(note.id);
+    this.notifyOthers(note);
     return await this.noteRepository.save(note);
   }
 
@@ -322,7 +310,7 @@ export class PermissionsService {
       );
       (await note.groupPermissions).push(noteGroupPermission);
     }
-    this.notifyOthers(note.id);
+    this.notifyOthers(note);
     return await this.noteRepository.save(note);
   }
 
@@ -357,7 +345,7 @@ export class PermissionsService {
       }
     }
     note.groupPermissions = Promise.resolve(newPermissions);
-    this.notifyOthers(note.id);
+    this.notifyOthers(note);
     return await this.noteRepository.save(note);
   }
 
@@ -370,7 +358,7 @@ export class PermissionsService {
    */
   async changeOwner(note: Note, owner: User): Promise<Note> {
     note.owner = Promise.resolve(owner);
-    this.notifyOthers(note.id);
+    this.notifyOthers(note);
     return await this.noteRepository.save(note);
   }
 }

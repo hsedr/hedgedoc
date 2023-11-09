@@ -7,17 +7,12 @@
 export type ScrollCallback = (scrollState: ScrollState) => void
 
 export interface ScrollProps {
-  scrollState?: ScrollState
-  onScroll?: ScrollCallback
+  scrollState?: ScrollState | null
+  onScroll?: ScrollCallback | null
   onMakeScrollSource?: () => void
 }
 
 export interface ScrollState {
   firstLineInView: number
   scrolledPercentage: number
-}
-
-export interface DualScrollState {
-  editorScrollState: ScrollState
-  rendererScrollState: ScrollState
 }

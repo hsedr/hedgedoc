@@ -5,8 +5,9 @@
  */
 import { useApplicationState } from '../../../hooks/common/use-application-state'
 import { ORIGIN, useBaseUrl } from '../../../hooks/common/use-base-url'
-import { useDarkModeState } from '../../../hooks/common/use-dark-mode-state'
 import { useMayEdit } from '../../../hooks/common/use-may-edit'
+import { useTranslatedText } from '../../../hooks/common/use-translated-text'
+import { useDarkModeState } from '../../../hooks/dark-mode/use-dark-mode-state'
 import { cypressAttribute, cypressId } from '../../../utils/cypress-attribute'
 import { findLanguageByCodeBlockName } from '../../markdown-renderer/extensions/_base-classes/code-block-markdown-extension/find-language-by-code-block-name'
 import type { ScrollProps } from '../synced-scroll/scroll-props'
@@ -41,8 +42,9 @@ import { languages } from '@codemirror/language-data'
 import { lintGutter } from '@codemirror/lint'
 import { oneDark } from '@codemirror/theme-one-dark'
 import ReactCodeMirror from '@uiw/react-codemirror'
-import React, { useEffect, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
+import React, { useCallback, useEffect, useMemo } from 'react'
+import { useUiNotifications } from '../../notifications/ui-notification-boundary'
+import { Lock as IconLock } from 'react-bootstrap-icons'
 
 export type EditorPaneProps = ScrollProps
 
@@ -56,14 +58,15 @@ export type EditorPaneProps = ScrollProps
  * @external {ReactCodeMirror} https://npmjs.com/@uiw/react-codemirror
  */
 export const EditorPane: React.FC<EditorPaneProps> = ({ scrollState, onScroll, onMakeScrollSource }) => {
-  useApplyScrollState(scrollState)
+  const { dispatchUiNotification } = useUiNotifications()
+  useApplyScrollState(scrollState ?? null)
 
   const messageTransporter = useRealtimeConnection()
 
   useDisconnectOnUserLoginStatusChange(messageTransporter)
 
   const realtimeDoc = useRealtimeDoc()
-  const editorScrollExtension = useCodeMirrorScrollWatchExtension(onScroll)
+  const editorScrollExtension = useCodeMirrorScrollWatchExtension(onScroll ?? null)
   const tablePasteExtensions = useCodeMirrorTablePasteExtension()
   const fileInsertExtension = useCodeMirrorFileInsertExtension()
   const spellCheckExtension = useCodeMirrorSpellCheckExtension()
@@ -129,31 +132,43 @@ export const EditorPane: React.FC<EditorPaneProps> = ({ scrollState, onScroll, o
     [ligaturesEnabled]
   )
 
-  const { t } = useTranslation()
   const darkModeActivated = useDarkModeState()
   const editorOrigin = useBaseUrl(ORIGIN.EDITOR)
   const isSynced = useApplicationState((state) => state.realtimeStatus.isSynced)
   const mayEdit = useMayEdit()
 
   useEffect(() => {
-    const listener = messageTransporter.doAsSoonAsConnected(() => messageTransporter.sendReady())
+    const listener = messageTransporter.doAsSoonAsConnected(() => messageTransporter.markAsReady())
     return () => {
       listener.off()
     }
   }, [messageTransporter])
+
+  const translateOptions = useMemo(() => ({ host: editorOrigin }), [editorOrigin])
+  const placeholderText = useTranslatedText('editor.placeholder', translateOptions)
+
+  const userMayEdit = useMayEdit()
+  const verifyUserIsAllowedToType = useCallback(() => {
+    if (!userMayEdit) {
+      dispatchUiNotification('editor.error.noPermission.title', 'editor.error.noPermission.description', {
+        icon: IconLock
+      })
+    }
+  }, [dispatchUiNotification, userMayEdit])
 
   return (
     <div
       className={`d-flex flex-column h-100 position-relative`}
       onTouchStart={onMakeScrollSource}
       onMouseEnter={onMakeScrollSource}
+      onKeyDown={verifyUserIsAllowedToType}
       {...cypressId('editor-pane')}
       {...cypressAttribute('editor-ready', String(updateViewContextExtension !== null && isSynced && mayEdit))}>
       <MaxLengthWarning />
       <ToolBar />
       <ReactCodeMirror
-        editable={updateViewContextExtension !== null && isSynced && mayEdit}
-        placeholder={t('editor.placeholder', { host: editorOrigin }) ?? ''}
+        readOnly={updateViewContextExtension === null || !isSynced || !mayEdit}
+        placeholder={placeholderText}
         extensions={extensions}
         width={'100%'}
         height={'100%'}

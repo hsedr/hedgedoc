@@ -10,7 +10,7 @@
 #    DOCKER_BUILDKIT=1 docker build -f docker/Dockerfile .
 
 ## Stage 0: Base image with only yarn and package.json
-FROM docker.io/node:19-alpine@sha256:53741c7511b1836b5eb7e788a7b399c058b0b549f205d2c6af831ec1a9a81c31 as base
+FROM docker.io/node:20-alpine@sha256:8e015de364a2eb2ed7c52a558e9f716dcb615560ffd132234087c10ccc1f2c63 as base
 # Add tini to handle signals
 # https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md#handling-kernel-signals
 RUN apk add --no-cache tini
@@ -20,7 +20,7 @@ ENV YARN_CACHE_FOLDER=/tmp/.yarn
 
 ## Stage 1: Code with all dependencies
 FROM base as code-with-deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat git
 
 USER node
 WORKDIR /usr/src/app
@@ -40,7 +40,7 @@ ARG TURBO_TEAM
 ARG TURBO_API
 ARG TURBO_TOKEN
 
-RUN yarn turbo run build --filter=backend --no-cache --no-daemon
+RUN yarn build --filter=backend --no-cache --no-daemon
 
 ## Stage 2b: Install only prod dependencies
 FROM code-with-deps as prod-dependencies
@@ -67,7 +67,7 @@ COPY --chown=node package.json package.json
 COPY --chown=node --from=prod-dependencies /usr/src/app/node_modules ./node_modules
 
 COPY --chown=node backend/package.json backend/package.json
-COPY --chown=node --from=builder /usr/src/app/backend/dist backend/dist
+COPY --chown=node --from=builder /usr/src/app/backend/dist/src backend/dist
 COPY --chown=node backend/public backend/public
 
 COPY --chown=node commons/package.json /usr/src/app/commons/package.json

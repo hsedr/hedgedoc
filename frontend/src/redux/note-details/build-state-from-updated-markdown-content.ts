@@ -5,10 +5,15 @@
  */
 import { calculateLineStartIndexes } from './calculate-line-start-indexes'
 import { initialState } from './initial-state'
-import { createNoteFrontmatterFromYaml } from './raw-note-frontmatter-parser/parser'
 import type { NoteDetails } from './types/note-details'
-import { extractFrontmatter, generateNoteTitle } from '@hedgedoc/commons'
-import type { PresentFrontmatterExtractionResult } from '@hedgedoc/commons'
+import type { FrontmatterExtractionResult, NoteFrontmatter } from '@hedgedoc/commons'
+import {
+  convertRawFrontmatterToNoteFrontmatter,
+  extractFrontmatter,
+  generateNoteTitle,
+  parseRawFrontmatterFromYaml
+} from '@hedgedoc/commons'
+import { Optional } from '@mrdrogdrog/optional'
 
 /**
  * Copies a {@link NoteDetails} but with another markdown content.
@@ -40,7 +45,7 @@ const buildStateFromMarkdownContentAndLines = (
 ): NoteDetails => {
   const frontmatterExtraction = extractFrontmatter(markdownContentLines)
   const lineStartIndexes = calculateLineStartIndexes(markdownContentLines)
-  if (frontmatterExtraction.isPresent) {
+  if (frontmatterExtraction !== undefined) {
     return buildStateFromFrontmatterUpdate(
       {
         ...state,
@@ -60,10 +65,10 @@ const buildStateFromMarkdownContentAndLines = (
         lines: markdownContentLines,
         lineStartIndexes
       },
+      startOfContentLineOffset: 0,
       rawFrontmatter: '',
-      title: generateNoteTitle(initialState.frontmatter, state.firstHeading),
-      frontmatter: initialState.frontmatter,
-      frontmatterRendererInfo: initialState.frontmatterRendererInfo
+      title: generateNoteTitle(initialState.frontmatter, () => state.firstHeading),
+      frontmatter: initialState.frontmatter
     }
   }
 }
@@ -76,35 +81,32 @@ const buildStateFromMarkdownContentAndLines = (
  */
 const buildStateFromFrontmatterUpdate = (
   state: NoteDetails,
-  frontmatterExtraction: PresentFrontmatterExtractionResult
+  frontmatterExtraction: FrontmatterExtractionResult
 ): NoteDetails => {
   if (frontmatterExtraction.rawText === state.rawFrontmatter) {
     return state
   }
-  try {
-    const frontmatter = createNoteFrontmatterFromYaml(frontmatterExtraction.rawText)
-    return {
-      ...state,
-      rawFrontmatter: frontmatterExtraction.rawText,
-      frontmatter: frontmatter,
-      title: generateNoteTitle(frontmatter, state.firstHeading),
-      frontmatterRendererInfo: {
-        lineOffset: frontmatterExtraction.lineOffset,
-        frontmatterInvalid: false,
-        slideOptions: frontmatter.slideOptions
-      }
-    }
-  } catch (e) {
-    return {
-      ...state,
-      title: generateNoteTitle(initialState.frontmatter, state.firstHeading),
-      rawFrontmatter: frontmatterExtraction.rawText,
-      frontmatter: initialState.frontmatter,
-      frontmatterRendererInfo: {
-        lineOffset: frontmatterExtraction.lineOffset,
-        frontmatterInvalid: true,
-        slideOptions: initialState.frontmatterRendererInfo.slideOptions
-      }
-    }
+  return buildStateFromFrontmatter(state, parseFrontmatter(frontmatterExtraction), frontmatterExtraction)
+}
+
+const parseFrontmatter = (frontmatterExtraction: FrontmatterExtractionResult) => {
+  return Optional.of(parseRawFrontmatterFromYaml(frontmatterExtraction.rawText))
+    .filter((frontmatter) => frontmatter.error === undefined)
+    .map((frontmatter) => frontmatter.value)
+    .map((value) => convertRawFrontmatterToNoteFrontmatter(value))
+    .orElse(initialState.frontmatter)
+}
+
+const buildStateFromFrontmatter = (
+  state: NoteDetails,
+  noteFrontmatter: NoteFrontmatter,
+  frontmatterExtraction: FrontmatterExtractionResult
+) => {
+  return {
+    ...state,
+    title: generateNoteTitle(noteFrontmatter, () => state.firstHeading),
+    rawFrontmatter: frontmatterExtraction.rawText,
+    frontmatter: noteFrontmatter,
+    startOfContentLineOffset: frontmatterExtraction.lineOffset
   }
 }

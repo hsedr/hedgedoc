@@ -13,7 +13,10 @@ on:
 jobs:
   reuse:
     runs-on: ubuntu-latest
+    container:
+      image: fsfe/reuse:2.1.0@sha256:fa898b2fc662e6feae6782d971e6a45105250841676823508e5fcb873a29f68e
     steps:
-      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-      - name: REUSE Compliance Check
-        uses: fsfe/reuse-action@e7a435374d26d54b324fa6699d8eafb076340dfd # v1.2.0
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Run linter
+        run: reuse lint

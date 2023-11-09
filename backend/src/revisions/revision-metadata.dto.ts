@@ -5,7 +5,7 @@
  */
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDate, IsNumber, IsString } from 'class-validator';
+import { IsArray, IsDate, IsNumber, IsString } from 'class-validator';
 
 import { BaseDto } from '../utils/base.dto.';
 import { Revision } from './revision.entity';
@@ -15,6 +15,7 @@ export class RevisionMetadataDto extends BaseDto {
    * ID of this revision
    * @example 13
    */
+  @Type(() => Number)
   @IsNumber()
   @ApiProperty()
   id: Revision['id'];
@@ -41,7 +42,7 @@ export class RevisionMetadataDto extends BaseDto {
    * Does not include anonymous users
    */
   @IsString()
-  @ApiProperty()
+  @ApiProperty({ isArray: true, type: String })
   authorUsernames: string[];
 
   /**
@@ -50,4 +51,31 @@ export class RevisionMetadataDto extends BaseDto {
   @IsNumber()
   @ApiProperty()
   anonymousAuthorCount: number;
+
+  /**
+   * Title of the note
+   * Does not contain any markup but might be empty
+   * @example "Shopping List"
+   */
+  @IsString()
+  @ApiProperty()
+  title: string;
+
+  /**
+   * Description of the note
+   * Does not contain any markup but might be empty
+   * @example Everything I want to buy
+   */
+  @IsString()
+  @ApiProperty()
+  description: string;
+
+  /**
+   * List of tags assigned to this note
+   * @example "['shopping', 'personal']
+   */
+  @IsArray()
+  @IsString({ each: true })
+  @ApiProperty({ isArray: true, type: String })
+  tags: string[];
 }

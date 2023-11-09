@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { RouterModule, Routes } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule, TestingModuleBuilder } from '@nestjs/testing';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { RouterModule, Routes } from 'nest-router';
 import { Connection, createConnection } from 'typeorm';
 
 import { PrivateApiModule } from '../src/api/private/private-api.module';
@@ -77,8 +77,8 @@ import { PermissionsModule } from '../src/permissions/permissions.module';
 import { PermissionsService } from '../src/permissions/permissions.service';
 import { RevisionsModule } from '../src/revisions/revisions.module';
 import { RevisionsService } from '../src/revisions/revisions.service';
-import { SessionModule } from '../src/session/session.module';
-import { SessionService } from '../src/session/session.service';
+import { SessionModule } from '../src/sessions/session.module';
+import { SessionService } from '../src/sessions/session.service';
 import { User } from '../src/users/user.entity';
 import { UsersModule } from '../src/users/users.module';
 import { UsersService } from '../src/users/users.service';
@@ -200,8 +200,9 @@ export class TestSetupBuilder {
           type: 'sqlite',
           database: ':memory:',
           autoLoadEntities: true,
-          synchronize: true,
           dropSchema: true,
+          migrations: [`src/migrations/sqlite-*.ts`],
+          migrationsRun: true,
         };
       case 'postgres':
       case 'mariadb':
@@ -211,8 +212,11 @@ export class TestSetupBuilder {
           username: 'hedgedoc',
           password: 'hedgedoc',
           autoLoadEntities: true,
-          synchronize: true,
           dropSchema: true,
+          migrations: [
+            `src/migrations/${process.env.HEDGEDOC_TEST_DB_TYPE}-*.ts`,
+          ],
+          migrationsRun: true,
         };
       default:
         throw new Error('Unknown database type in HEDGEDOC_TEST_DB_TYPE');
@@ -240,7 +244,7 @@ export class TestSetupBuilder {
       'https://md-' + testSetupBuilder.testId + '.example.com';
     testSetupBuilder.testingModuleBuilder = Test.createTestingModule({
       imports: [
-        RouterModule.forRoutes(routes),
+        RouterModule.register(routes),
         TypeOrmModule.forRoot(
           TestSetupBuilder.getTestDBConf(testSetupBuilder.testId),
         ),

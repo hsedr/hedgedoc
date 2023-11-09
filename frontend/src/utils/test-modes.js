@@ -37,8 +37,23 @@ const isMockMode = !!process.env.NEXT_PUBLIC_USE_MOCK_API && isPositiveAnswer(pr
  */
 const isDevMode = process.env.NODE_ENV === 'development'
 
+/**
+ * Defines if the current runtime contains the bundle analyzer and profiling metrics.
+ * @type boolean
+ */
+const isProfilingMode = !!process.env.ANALYZE && isPositiveAnswer(process.env.ANALYZE)
+
+/**
+ * Defines if the currently running process is building or executing.
+ *
+ * @type boolean
+ */
+const isBuildTime = !!process.env.BUILD_TIME && isPositiveAnswer(process.env.BUILD_TIME)
+
 module.exports = {
   isTestMode,
   isMockMode,
-  isDevMode
+  isDevMode,
+  isProfilingMode,
+  isBuildTime
 }

@@ -16,8 +16,8 @@ import type { Note, NoteDeletionOptions, NoteMetadata } from './types'
  * @return Content and metadata of the specified note.
  * @throws {Error} when the api request wasn't successful.
  */
-export const getNote = async (noteIdOrAlias: string): Promise<Note> => {
-  const response = await new GetApiRequestBuilder<Note>('notes/' + noteIdOrAlias).sendRequest()
+export const getNote = async (noteIdOrAlias: string, baseUrl?: string): Promise<Note> => {
+  const response = await new GetApiRequestBuilder<Note>('notes/' + noteIdOrAlias, baseUrl).sendRequest()
   return response.asParsedJsonObject()
 }
 
@@ -86,7 +86,7 @@ export const deleteNote = async (noteIdOrAlias: string): Promise<void> => {
     .withJsonBody({
       keepMedia: false
       // TODO Ask whether the user wants to keep the media uploaded to the note.
-      // https://github.com/hedgedoc/react-client/issues/2288
+      //  https://github.com/hedgedoc/hedgedoc/issues/2928
     })
     .sendRequest()
 }

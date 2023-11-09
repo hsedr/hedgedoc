@@ -3,10 +3,9 @@
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-import { DarkModePreference } from '../../redux/dark-mode/types'
 import { Logger } from '../../utils/logger'
 import { AsyncLoadingBoundary } from '../common/async-loading-boundary/async-loading-boundary'
-import { RenderIframe } from '../editor-page/renderer-pane/render-iframe'
+import { RendererIframe } from '../common/renderer-iframe/renderer-iframe'
 import { RendererType } from '../render-page/window-post-message-communicator/rendering-message'
 import { fetchFrontPageContent } from './requests'
 import React, { useEffect } from 'react'
@@ -28,12 +27,12 @@ export const IntroCustomContent: React.FC = () => {
 
   return (
     <AsyncLoadingBoundary loading={loading || !value} error={error} componentName={'custom intro content'}>
-      <RenderIframe
+      <RendererIframe
         frameClasses={'w-100 overflow-y-hidden'}
         markdownContentLines={value as string[]}
         rendererType={RendererType.SIMPLE}
-        forcedDarkMode={DarkModePreference.DARK}
         adaptFrameHeightToContent={true}
+        showWaitSpinner={true}
       />
     </AsyncLoadingBoundary>
   )

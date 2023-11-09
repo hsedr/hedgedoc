@@ -1,38 +1,50 @@
 {
   "name": "hedgedoc",
-  "version": "2.0.0-dev",
+  "version": "2.0.0-alpha.2",
   "private": true,
   "workspaces": [
     "backend",
     "frontend",
     "commons",
-    "dev-reverse-proxy"
+    "dev-reverse-proxy",
+    "docs",
+    "html-to-react",
+    "markdown-it-plugins"
   ],
   "scripts": {
-    "build": "dotenv -- turbo run build",
-    "lint": "dotenv -- turbo run lint",
-    "format": "dotenv -- turbo run format",
-    "start:dev": "dotenv -- turbo run start:dev",
-    "test:ci": "dotenv -- turbo run test:ci"
+    "build": "dotenv -c production -- turbo run build",
+    "build:test": "dotenv -c production -- turbo run build:test",
+    "lint": "dotenv -c development -- turbo run lint",
+    "lint:fix": "dotenv -c development -- turbo run lint:fix",
+    "format": "dotenv -c development -- turbo run format",
+    "start:dev": "dotenv -c development -- turbo run start:dev",
+    "start": "dotenv -c production -- turbo run start",
+    "test:ci": "dotenv -c test -- turbo run test:ci --concurrency 1",
+    "test": "dotenv -c test -- turbo run test --concurrency 1",
+    "test:e2e:ci": "dotenv -c test -- turbo run test:e2e:ci"
   },
-  "packageManager": "yarn@3.5.0",
+  "packageManager": "yarn@4.0.0",
   "resolutions": {
     "domhandler": "5.0.3",
-    "@codemirror/state": "6.2.0",
-    "@codemirror/autocomplete": "6.5.1",
-    "@codemirror/view": "6.9.5",
-    "@codemirror/language": "6.6.0",
-    "@codemirror/commands": "6.2.2",
-    "@codemirror/lang-markdown": "6.1.1",
-    "@codemirror/language-data": "6.2.1",
-    "@codemirror/lint": "6.2.1",
+    "@codemirror/state": "6.3.1",
+    "@codemirror/autocomplete": "6.10.2",
+    "@codemirror/view": "6.21.4",
+    "@codemirror/language": "6.9.2",
+    "@codemirror/commands": "6.3.0",
+    "@codemirror/lang-markdown": "6.2.2",
+    "@codemirror/language-data": "6.3.1",
+    "@codemirror/lint": "6.4.2",
     "@codemirror/theme-one-dark": "6.1.2",
-    "@types/react": "18.0.35",
+    "@lezer/common": "1.1.0",
+    "@types/react": "18.2.33",
     "eventemitter2@6.4.9": "patch:eventemitter2@npm%3A6.4.9#./.yarn/patches/eventemitter2-npm-6.4.9-ba37798a18.patch",
-    "yjs@13.5.52": "patch:yjs@npm%3A13.5.52#./.yarn/patches/yjs-npm-13.5.52-a5c64d9068.patch"
+    "yjs@13.6.8": "patch:yjs@npm%3A13.6.8#./.yarn/patches/yjs-remove-import-warning-in-test.patch",
+    "vega-canvas@^1.2.6": "patch:vega-canvas@npm%3A1.2.7#./.yarn/patches/remove-vega-canvas-node.patch",
+    "vega-canvas@^1.2.7": "patch:vega-canvas@npm%3A1.2.7#./.yarn/patches/remove-vega-canvas-node.patch",
+    "@dicebear/converter@7.0.1": "patch:@dicebear/converter@npm%3A7.0.1#./.yarn/patches/@dicebear-converter-npm-7.0.1-cb9d17808e.patch"
   },
   "devDependencies": {
-    "dotenv-cli": "7.2.1",
-    "turbo": "1.9.1"
+    "dotenv-cli": "7.3.0",
+    "turbo": "1.10.16"
   }
 }

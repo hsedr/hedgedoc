@@ -8,10 +8,9 @@ import { ShowIf } from '../../../components/common/show-if/show-if'
 import type { CodeProps } from '../../../components/markdown-renderer/replace-components/code-block-component-replacer'
 import { cypressId } from '../../../utils/cypress-attribute'
 import { Logger } from '../../../utils/logger'
-import { useRouter } from 'next/router'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Alert } from 'react-bootstrap'
 import { useAsync } from 'react-use'
+import { ApplicationErrorAlert } from '../../../components/common/application-error-alert/application-error-alert'
 
 const log = new Logger('GraphvizFrame')
 /**
@@ -23,8 +22,6 @@ const log = new Logger('GraphvizFrame')
 export const GraphvizFrame: React.FC<CodeProps> = ({ code }) => {
   const container = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string>()
-
-  const { basePath } = useRouter()
 
   const {
     value: graphvizImport,
@@ -58,12 +55,12 @@ export const GraphvizFrame: React.FC<CodeProps> = ({ code }) => {
     } catch (error) {
       showError(error as string)
     }
-  }, [code, basePath, showError, graphvizImport])
+  }, [code, showError, graphvizImport])
 
   return (
     <AsyncLoadingBoundary loading={isLibLoading || !graphvizImport} componentName={'graphviz'} error={libLoadingError}>
       <ShowIf condition={!!error}>
-        <Alert variant={'warning'}>{error}</Alert>
+        <ApplicationErrorAlert className={'text-wrap'}>{error}</ApplicationErrorAlert>
       </ShowIf>
       <div className={'svg-container'} {...cypressId('graphviz')} ref={container} />
     </AsyncLoadingBoundary>

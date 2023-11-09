@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+import { measurePerformance } from '../../../utils/measure-performance'
 import { HtmlToReact } from '../../common/html-to-react/html-to-react'
 import type { MarkdownRendererExtension } from '../extensions/_base-classes/markdown-renderer-extension'
 import { useCombinedNodePreprocessor } from './hooks/use-combined-node-preprocessor'
@@ -11,7 +12,7 @@ import { LineContentToLineIdMapper } from './utils/line-content-to-line-id-mappe
 import { NodeToReactTransformer } from './utils/node-to-react-transformer'
 import type { ParserOptions } from '@hedgedoc/html-to-react'
 import type DOMPurify from 'dompurify'
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 
 export interface MarkdownToReactProps {
   markdownContentLines: string[]
@@ -40,10 +41,14 @@ export const MarkdownToReact: React.FC<MarkdownToReactProps> = ({
 
   useMemo(() => {
     nodeToReactTransformer.setReplacers(markdownRenderExtensions.flatMap((extension) => extension.buildReplacers()))
+    return null //todo: replace usememo hack
   }, [nodeToReactTransformer, markdownRenderExtensions])
 
   useMemo(() => {
-    nodeToReactTransformer.setLineIds(lineNumberMapper.updateLineMapping(markdownContentLines))
+    measurePerformance('markdown-to-react: update-line-mapping', () => {
+      nodeToReactTransformer.setLineIds(lineNumberMapper.updateLineMapping(markdownContentLines))
+    })
+    return null
   }, [nodeToReactTransformer, lineNumberMapper, markdownContentLines])
 
   const nodePreProcessor = useCombinedNodePreprocessor(markdownRenderExtensions)
@@ -60,13 +65,21 @@ export const MarkdownToReact: React.FC<MarkdownToReactProps> = ({
     [nodeToReactTransformer, nodePreProcessor]
   )
 
-  const html = useMemo(() => markdownIt.render(markdownContentLines.join('\n')), [markdownContentLines, markdownIt])
+  const html = useMemo(() => {
+    return measurePerformance('markdown-to-react: markdown-it', () =>
+      markdownIt.render(markdownContentLines.join('\n'))
+    )
+  }, [markdownContentLines, markdownIt])
   const domPurifyConfig: DOMPurify.Config = useMemo(
     () => ({
       ADD_TAGS: markdownRenderExtensions.flatMap((extension) => extension.buildTagNameAllowList())
     }),
     [markdownRenderExtensions]
   )
+
+  useEffect(() => {
+    markdownRenderExtensions.forEach((extension) => extension.doAfterRendering())
+  }, [html, markdownRenderExtensions])
 
   return <HtmlToReact htmlCode={html} parserOptions={parserOptions} domPurifyConfig={domPurifyConfig} />
 }

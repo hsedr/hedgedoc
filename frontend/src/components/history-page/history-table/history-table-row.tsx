@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -44,27 +44,29 @@ export const HistoryTableRow: React.FC<HistoryEntryProps & HistoryEventHandlers>
   return (
     <tr {...cypressAttribute('entry-title', entryTitle)}>
       <td>
-        <Link href={`/n/${entry.identifier}`} className='text-light' {...cypressId('history-entry-title')}>
+        <Link href={`/n/${entry.identifier}`} className='text-secondary' {...cypressId('history-entry-title')}>
           {entryTitle}
         </Link>
       </td>
       <td>{formatHistoryDate(entry.lastVisitedAt)}</td>
       <td>
         {entry.tags.map((tag) => (
-          <Badge className={'bg-light me-1 mb-1'} key={tag}>
+          <Badge className={'me-1 mb-1'} key={tag}>
             {tag}
           </Badge>
         ))}
       </td>
       <td>
-        <PinButton isDark={true} isPinned={entry.pinStatus} onPinClick={onPinEntry} className={'mb-1 me-1'} />
-        <EntryMenu
-          id={entry.identifier}
-          title={entryTitle}
-          origin={entry.origin}
-          onRemoveFromHistory={onEntryRemove}
-          onDeleteNote={onDeleteNote}
-        />
+        <div className={'d-flex align-items-start justify-content-center'}>
+          <PinButton isDark={true} isPinned={entry.pinStatus} onPinClick={onPinEntry} className={'mb-1 me-1'} />
+          <EntryMenu
+            id={entry.identifier}
+            title={entryTitle}
+            origin={entry.origin}
+            onRemoveFromHistory={onEntryRemove}
+            onDeleteNote={onDeleteNote}
+          />
+        </div>
       </td>
     </tr>
   )

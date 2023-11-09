@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import {
+  DisconnectReason,
+  MessageTransporter,
   NotePermissions,
   userCanEdit,
-  WebsocketTransporter,
 } from '@hedgedoc/commons';
 import { OnGatewayConnection, WebSocketGateway } from '@nestjs/websockets';
 import { IncomingMessage } from 'http';
@@ -14,12 +15,14 @@ import WebSocket from 'ws';
 
 import { ConsoleLoggerService } from '../../logger/console-logger.service';
 import { NotesService } from '../../notes/notes.service';
+import { NotePermission } from '../../permissions/note-permission.enum';
 import { PermissionsService } from '../../permissions/permissions.service';
-import { SessionService } from '../../session/session.service';
+import { SessionService } from '../../sessions/session.service';
 import { User } from '../../users/user.entity';
 import { UsersService } from '../../users/users.service';
 import { RealtimeConnection } from '../realtime-note/realtime-connection';
 import { RealtimeNoteService } from '../realtime-note/realtime-note.service';
+import { BackendWebsocketAdapter } from './backend-websocket-adapter';
 import { extractNoteIdFromRequestUrl } from './utils/extract-note-id-from-request-url';
 
 /**
@@ -59,13 +62,16 @@ export class WebsocketGateway implements OnGatewayConnection {
 
       const username = user?.username ?? 'guest';
 
-      if (!(await this.permissionsService.mayRead(user, note))) {
-        //TODO: [mrdrogdrog] inform client about reason of disconnect.
+      const notePermission = await this.permissionsService.determinePermission(
+        user,
+        note,
+      );
+      if (notePermission < NotePermission.READ) {
         this.logger.log(
           `Access denied to note '${note.id}' for user '${username}'`,
           'handleConnection',
         );
-        clientSocket.close();
+        clientSocket.close(DisconnectReason.USER_NOT_PERMITTED);
         return;
       }
 
@@ -80,23 +86,27 @@ export class WebsocketGateway implements OnGatewayConnection {
       const realtimeNote =
         await this.realtimeNoteService.getOrCreateRealtimeNote(note);
 
-      const websocketTransporter = new WebsocketTransporter();
+      const websocketTransporter = new MessageTransporter();
+      websocketTransporter.setAdapter(
+        new BackendWebsocketAdapter(clientSocket),
+      );
+
       const permissions = await this.noteService.toNotePermissionsDto(note);
       const acceptEdits: boolean = userCanEdit(
         permissions as NotePermissions,
         user?.username,
       );
+
       const connection = new RealtimeConnection(
         websocketTransporter,
         user,
         realtimeNote,
         acceptEdits,
       );
-      websocketTransporter.setWebsocket(clientSocket);
 
       realtimeNote.addClient(connection);
 
-      websocketTransporter.sendReady();
+      websocketTransporter.markAsReady();
     } catch (error: unknown) {
       this.logger.error(
         `Error occurred while initializing: ${(error as Error).message}`,
@@ -118,10 +128,14 @@ export class WebsocketGateway implements OnGatewayConnection {
   ): Promise<User | null> {
     const sessionId = this.sessionService.extractSessionIdFromRequest(request);
 
+    this.logger.debug(
+      'Checking if sessionId is empty',
+      'findUserByRequestSession',
+    );
     if (sessionId.isEmpty()) {
       return null;
     }
-
+    this.logger.debug('sessionId is not empty', 'findUserByRequestSession');
     const username = await this.sessionService.fetchUsernameForSessionId(
       sessionId.get(),
     );

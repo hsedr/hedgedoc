@@ -1,33 +1,28 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { AuthProviderType } from '../../src/api/config/types'
+import { HttpMethod } from '../../src/handler-utils/respond-to-matching-request'
+import { IGNORE_MOTD, MOTD_LOCAL_STORAGE_KEY } from '../../src/components/global-dialogs/motd-modal/local-storage-keys'
 
 declare namespace Cypress {
   interface Chainable {
-    loadConfig(): Chainable<Window>
+    loadConfig(additionalConfig?: Partial<typeof config>): Chainable<Window>
+    logIn: Chainable<Window>
+    logOut: Chainable<Window>
   }
 }
 
 export const branding = {
   name: 'DEMO Corp',
-  logo: 'public/img/demo.png'
+  logo: '/public/img/demo.png'
 }
 
 export const authProviders = [
   {
-    type: AuthProviderType.FACEBOOK
-  },
-  {
     type: AuthProviderType.GITHUB
-  },
-  {
-    type: AuthProviderType.TWITTER
-  },
-  {
-    type: AuthProviderType.DROPBOX
   },
   {
     type: AuthProviderType.GOOGLE
@@ -58,8 +53,8 @@ export const authProviders = [
 ]
 
 export const config = {
-  allowAnonymous: true,
   allowRegister: true,
+  guestAccess: 'write',
   authProviders: authProviders,
   branding: branding,
   useImageProxy: false,
@@ -80,23 +75,27 @@ export const config = {
 }
 
 Cypress.Commands.add('loadConfig', (additionalConfig?: Partial<typeof config>) => {
-  return cy.intercept('api/private/config', {
-    statusCode: 200,
-    body: {
-      ...config,
-      ...additionalConfig
-    }
-  })
+  return cy.request(HttpMethod.POST, '/api/private/config', { ...config, ...additionalConfig })
+})
+
+Cypress.Commands.add('logIn', () => {
+  return cy.setCookie('mock-session', '1', { path: '/' })
+})
+
+Cypress.Commands.add('logOut', () => {
+  return cy.clearCookie('mock-session')
 })
 
 beforeEach(() => {
   cy.loadConfig()
+  window.localStorage.setItem(MOTD_LOCAL_STORAGE_KEY, IGNORE_MOTD)
+  cy.logIn()
 
-  cy.intercept('GET', 'public/motd.md', {
+  cy.intercept('GET', '/public/motd.md', {
     body: '404 Not Found!',
     statusCode: 404
   })
-  cy.intercept('HEAD', 'public/motd.md', {
+  cy.intercept('HEAD', '/public/motd.md', {
     statusCode: 404
   })
 })

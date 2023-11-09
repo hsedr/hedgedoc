@@ -4,15 +4,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import {
-  MockedBackendMessageTransporter,
+  MockedBackendTransportAdapter,
   YDocSyncServerAdapter,
 } from '@hedgedoc/commons';
 import { Mock } from 'ts-mockery';
 
 import { User } from '../../../users/user.entity';
+import { Username } from '../../../utils/username';
 import { RealtimeConnection } from '../realtime-connection';
 import { RealtimeNote } from '../realtime-note';
 import { RealtimeUserStatusAdapter } from '../realtime-user-status-adapter';
+import { MockMessageTransporter } from './mock-message-transporter';
 
 enum RealtimeUserState {
   WITHOUT,
@@ -20,13 +22,13 @@ enum RealtimeUserState {
   WITH_READONLY,
 }
 
-const MOCK_FALLBACK_USERNAME = 'mock';
+const MOCK_FALLBACK_USERNAME: Username = 'mock';
 
 /**
  * Creates a mocked {@link RealtimeConnection realtime connection}.
  */
 export class MockConnectionBuilder {
-  private username: string | null;
+  private username: Username | null;
   private displayName: string | undefined;
   private includeRealtimeUserStatus: RealtimeUserState =
     RealtimeUserState.WITHOUT;
@@ -49,7 +51,7 @@ export class MockConnectionBuilder {
    *
    * @param username the username of the mocked user. If this value is omitted then the builder will user a {@link MOCK_FALLBACK_USERNAME fallback}.
    */
-  public withLoggedInUser(username?: string): this {
+  public withLoggedInUser(username?: Username): this {
     const newUsername = username ?? MOCK_FALLBACK_USERNAME;
     this.username = newUsername;
     this.displayName = newUsername;
@@ -81,9 +83,23 @@ export class MockConnectionBuilder {
   public build(): RealtimeConnection {
     const displayName = this.deriveDisplayName();
 
-    const transporter = new MockedBackendMessageTransporter('');
-    let realtimeUserStateAdapter: RealtimeUserStatusAdapter =
-      Mock.of<RealtimeUserStatusAdapter>({});
+    const transporter = new MockMessageTransporter();
+    transporter.setAdapter(new MockedBackendTransportAdapter(''));
+    const realtimeUserStateAdapter: RealtimeUserStatusAdapter =
+      this.includeRealtimeUserStatus === RealtimeUserState.WITHOUT
+        ? Mock.of<RealtimeUserStatusAdapter>({})
+        : new RealtimeUserStatusAdapter(
+            this.username ?? null,
+            displayName,
+            () =>
+              this.realtimeNote
+                .getConnections()
+                .map((connection) => connection.getRealtimeUserStateAdapter()),
+            transporter,
+            () =>
+              this.includeRealtimeUserStatus ===
+              RealtimeUserState.WITH_READWRITE,
+          );
 
     const mockUser =
       this.username === null
@@ -107,16 +123,10 @@ export class MockConnectionBuilder {
       this.realtimeNote.removeClient(connection),
     );
 
-    if (this.includeRealtimeUserStatus !== RealtimeUserState.WITHOUT) {
-      realtimeUserStateAdapter = new RealtimeUserStatusAdapter(
-        this.username ?? null,
-        displayName,
-        connection,
-        this.includeRealtimeUserStatus === RealtimeUserState.WITH_READWRITE,
-      );
-    }
-
     this.realtimeNote.addClient(connection);
+
+    transporter.markAsReady();
+    jest.advanceTimersByTime(0);
 
     return connection;
   }

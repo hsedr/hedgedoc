@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -7,17 +7,32 @@ import type { AuthProvider } from '../../src/api/config/types'
 import { AuthProviderType } from '../../src/api/config/types'
 
 const initLoggedOutTestWithCustomAuthProviders = (cy: Cypress.cy, enabledProviders: AuthProvider[]) => {
+  cy.logOut()
   cy.loadConfig({
     authProviders: enabledProviders
   })
-  cy.visitHome()
-  cy.logout()
+  cy.visitHistory()
 }
 
 describe('When logged-in, ', () => {
   it('sign-in button is hidden', () => {
-    cy.visitHome()
+    cy.visitHistory()
+    cy.getByCypressId('base-app-bar').should('be.visible')
     cy.getByCypressId('sign-in-button').should('not.exist')
+  })
+  describe('login page route will redirect', () => {
+    it('to /history if no redirect url has been provided', () => {
+      cy.visit('/login')
+      cy.url().should('contain', '/history')
+    })
+    it('to any page if a redirect url has been provided', () => {
+      cy.visit('/login?redirectBackTo=/profile')
+      cy.url().should('contain', '/profile')
+    })
+    it('to /history if a external redirect url has been provided', () => {
+      cy.visit('/login?redirectBackTo=https://example.org')
+      cy.url().should('contain', '/history')
+    })
   })
 })
 
@@ -36,7 +51,10 @@ describe('When logged-out ', () => {
           type: AuthProviderType.LOCAL
         }
       ])
-      cy.getByCypressId('sign-in-button').should('be.visible').parent().should('have.attr', 'href', '/login')
+      cy.getByCypressId('sign-in-button')
+        .should('be.visible')
+        .parent()
+        .should('have.attr', 'href', '/login?redirectBackTo=/history')
     })
 
     it('sign-in button points to login route: ldap', () => {
@@ -47,7 +65,10 @@ describe('When logged-out ', () => {
           providerName: 'cy LDAP'
         }
       ])
-      cy.getByCypressId('sign-in-button').should('be.visible').parent().should('have.attr', 'href', '/login')
+      cy.getByCypressId('sign-in-button')
+        .should('be.visible')
+        .parent()
+        .should('have.attr', 'href', '/login?redirectBackTo=/history')
     })
   })
 
@@ -76,7 +97,10 @@ describe('When logged-out ', () => {
           type: AuthProviderType.GOOGLE
         }
       ])
-      cy.getByCypressId('sign-in-button').should('be.visible').parent().should('have.attr', 'href', '/login')
+      cy.getByCypressId('sign-in-button')
+        .should('be.visible')
+        .parent()
+        .should('have.attr', 'href', '/login?redirectBackTo=/history')
     })
   })
 
@@ -90,7 +114,10 @@ describe('When logged-out ', () => {
           type: AuthProviderType.LOCAL
         }
       ])
-      cy.getByCypressId('sign-in-button').should('be.visible').parent().should('have.attr', 'href', '/login')
+      cy.getByCypressId('sign-in-button')
+        .should('be.visible')
+        .parent()
+        .should('have.attr', 'href', '/login?redirectBackTo=/history')
     })
   })
 })

@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import type { HistoryEntryWithOrigin } from '../../../api/history/types'
 import { HistoryEntryOrigin } from '../../../api/history/types'
 import { useApplicationState } from '../../../hooks/common/use-application-state'
+import { useTranslatedText } from '../../../hooks/common/use-translated-text'
 import { convertV1History, importHistoryEntries, mergeHistoryEntries } from '../../../redux/history/methods'
 import type { HistoryExportJson, V1HistoryEntry } from '../../../redux/history/types'
 import { cypressId } from '../../../utils/cypress-attribute'
@@ -15,14 +16,13 @@ import { useSafeRefreshHistoryStateCallback } from './hooks/use-safe-refresh-his
 import React, { useCallback, useRef, useState } from 'react'
 import { Button } from 'react-bootstrap'
 import { Upload as IconUpload } from 'react-bootstrap-icons'
-import { useTranslation } from 'react-i18next'
+import { useIsLoggedIn } from '../../../hooks/common/use-is-logged-in'
 
 /**
  * Button that lets the user select a history JSON file and uploads imports that into the history.
  */
 export const ImportHistoryButton: React.FC = () => {
-  const { t } = useTranslation()
-  const userExists = useApplicationState((state) => !!state.user)
+  const userExists = useIsLoggedIn()
   const historyState = useApplicationState((state) => state.history)
   const uploadInput = useRef<HTMLInputElement>(null)
   const [fileName, setFilename] = useState('')
@@ -65,6 +65,7 @@ export const ImportHistoryButton: React.FC = () => {
       }
       //TODO: [mrdrogdrog] The following whole block can be shortened using our `readFile` util.
       // But I won't do it right now because the whole components needs a make over and that's definitely out of scope for my current PR.
+      // https://github.com/hedgedoc/hedgedoc/issues/5042
       const fileReader = new FileReader()
       fileReader.onload = (event) => {
         if (event.target && event.target.result) {
@@ -117,6 +118,8 @@ export const ImportHistoryButton: React.FC = () => {
     }
   }
 
+  const buttonTitle = useTranslatedText('landing.history.toolbar.import')
+
   return (
     <div>
       <input
@@ -128,8 +131,8 @@ export const ImportHistoryButton: React.FC = () => {
         {...cypressId('import-history-file-input')}
       />
       <Button
-        variant={'light'}
-        title={t('landing.history.toolbar.import') ?? undefined}
+        variant={'secondary'}
+        title={buttonTitle}
         onClick={onUploadButtonClick}
         {...cypressId('import-history-file-button')}>
         <UiIcon icon={IconUpload} />

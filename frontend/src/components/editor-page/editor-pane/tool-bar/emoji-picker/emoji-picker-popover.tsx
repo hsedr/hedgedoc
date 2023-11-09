@@ -4,16 +4,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import fontStyles from '../../../../../../global-styles/variables.module.scss'
-import { useDarkModeState } from '../../../../../hooks/common/use-dark-mode-state'
+import { useDarkModeState } from '../../../../../hooks/dark-mode/use-dark-mode-state'
 import styles from './emoji-picker.module.scss'
 import { Picker } from 'emoji-picker-element'
-import type { EmojiClickEvent, EmojiClickEventDetail } from 'emoji-picker-element/shared'
-import type { PickerConstructorOptions } from 'emoji-picker-element/shared'
+import type { EmojiClickEvent, EmojiClickEventDetail, PickerConstructorOptions } from 'emoji-picker-element/shared'
 import React, { useEffect, useRef } from 'react'
 import { Popover } from 'react-bootstrap'
 import type { PopoverProps } from 'react-bootstrap/Popover'
 
-const EMOJI_DATA_PATH = '_next/static/js/emoji-data.json'
+const EMOJI_DATA_PATH = '/_next/static/js/emoji-data.json'
 
 const emojiPickerConfig: PickerConstructorOptions = {
   dataSource: EMOJI_DATA_PATH

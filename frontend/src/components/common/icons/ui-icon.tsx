@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+import { concatCssClasses } from '../../../utils/concat-css-classes'
 import styles from './ui-icons.module.scss'
 import React, { Fragment, useMemo } from 'react'
 import type { Icon } from 'react-bootstrap-icons'
@@ -13,9 +14,19 @@ export interface UiIconProps {
   size?: number | string
   className?: string
   spin?: boolean
+  title?: string
 }
 
-export const UiIcon: React.FC<UiIconProps> = ({ icon, nbsp, className, size, spin }) => {
+/**
+ * Renders an icon from react-bootstrap-icons.
+ * @param icon The icon to render
+ * @param nbsp True to render a non-breaking space after the icon
+ * @param className Additional CSS classes to apply to the icon
+ * @param size The size of the icon in em or as a valid width/height CSS value
+ * @param spin True to spin the icon
+ * @param title The title of the icon
+ */
+export const UiIcon: React.FC<UiIconProps> = ({ icon, nbsp, className, size, spin, title }) => {
   const finalSize = useMemo(() => {
     if (size === undefined) {
       return '1em'
@@ -26,9 +37,7 @@ export const UiIcon: React.FC<UiIconProps> = ({ icon, nbsp, className, size, spi
     }
   }, [size])
 
-  const finalClassName = useMemo(() => {
-    return `${spin ? styles.spin : ''} ${className ?? ''}`
-  }, [className, spin])
+  const finalClassName = useMemo(() => concatCssClasses(className, { [styles.spin]: spin }), [className, spin])
 
   if (icon) {
     return (
@@ -36,7 +45,8 @@ export const UiIcon: React.FC<UiIconProps> = ({ icon, nbsp, className, size, spi
         {React.createElement(icon, {
           className: finalClassName,
           width: finalSize,
-          height: finalSize
+          height: finalSize,
+          title
         })}
         {nbsp ? <Fragment>&nbsp;</Fragment> : null}
       </Fragment>

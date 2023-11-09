@@ -100,11 +100,18 @@ exports[`KaTeX markdown extensions renders an error message for an invalid LaTeX
     <span
       data-testid="katex-inline"
     >
-      <div
-        class="fade d-inline-block alert alert-danger show"
-        role="alert"
-      >
-        mocked parseerror
+      <div>
+        <h3>
+          This is a mock for ApplicationErrorAlert.
+        </h3>
+        Props: 
+        <code>
+          {"className":"d-inline-block"}
+        </code>
+        Children:
+        <div>
+          mocked parseerror
+        </div>
       </div>
     </span>
   </p>

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -33,18 +33,19 @@ import { NoteDto } from '../../../notes/note.dto';
 import { Note } from '../../../notes/note.entity';
 import { NoteMediaDeletionDto } from '../../../notes/note.media-deletion.dto';
 import { NotesService } from '../../../notes/notes.service';
-import { Permission } from '../../../permissions/permissions.enum';
+import { PermissionsGuard } from '../../../permissions/permissions.guard';
 import { PermissionsService } from '../../../permissions/permissions.service';
+import { RequirePermission } from '../../../permissions/require-permission.decorator';
+import { RequiredPermission } from '../../../permissions/required-permission.enum';
 import { RevisionMetadataDto } from '../../../revisions/revision-metadata.dto';
 import { RevisionDto } from '../../../revisions/revision.dto';
 import { RevisionsService } from '../../../revisions/revisions.service';
 import { User } from '../../../users/user.entity';
 import { UsersService } from '../../../users/users.service';
+import { Username } from '../../../utils/username';
 import { GetNoteInterceptor } from '../../utils/get-note.interceptor';
 import { MarkdownBody } from '../../utils/markdown-body.decorator';
 import { OpenApi } from '../../utils/openapi.decorator';
-import { Permissions } from '../../utils/permissions.decorator';
-import { PermissionsGuard } from '../../utils/permissions.guard';
 import { RequestNote } from '../../utils/request-note.decorator';
 import { RequestUser } from '../../utils/request-user.decorator';
 
@@ -67,7 +68,7 @@ export class NotesController {
     this.logger.setContext(NotesController.name);
   }
 
-  @Permissions(Permission.CREATE)
+  @RequirePermission(RequiredPermission.CREATE)
   @Post()
   @OpenApi(201, 403, 409, 413)
   async createNote(
@@ -81,7 +82,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.READ)
+  @RequirePermission(RequiredPermission.READ)
   @Get(':noteIdOrAlias')
   @OpenApi(
     {
@@ -100,8 +101,7 @@ export class NotesController {
     return await this.noteService.toNoteDto(note);
   }
 
-  @Permissions(Permission.CREATE)
-  @UseGuards(PermissionsGuard)
+  @RequirePermission(RequiredPermission.CREATE)
   @Post(':noteAlias')
   @OpenApi(
     {
@@ -126,7 +126,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.OWNER)
+  @RequirePermission(RequiredPermission.OWNER)
   @Delete(':noteIdOrAlias')
   @OpenApi(204, 403, 404, 500)
   async deleteNote(
@@ -149,7 +149,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.WRITE)
+  @RequirePermission(RequiredPermission.WRITE)
   @Put(':noteIdOrAlias')
   @OpenApi(
     {
@@ -172,7 +172,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.READ)
+  @RequirePermission(RequiredPermission.READ)
   @Get(':noteIdOrAlias/content')
   @OpenApi(
     {
@@ -191,7 +191,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.READ)
+  @RequirePermission(RequiredPermission.READ)
   @Get(':noteIdOrAlias/metadata')
   @OpenApi(
     {
@@ -210,7 +210,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.OWNER)
+  @RequirePermission(RequiredPermission.OWNER)
   @Put(':noteIdOrAlias/metadata/permissions')
   @OpenApi(
     {
@@ -232,8 +232,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.READ)
-  @UseGuards(TokenAuthGuard, PermissionsGuard)
+  @RequirePermission(RequiredPermission.READ)
   @Get(':noteIdOrAlias/metadata/permissions')
   @OpenApi(
     {
@@ -252,8 +251,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.OWNER)
-  @UseGuards(TokenAuthGuard, PermissionsGuard)
+  @RequirePermission(RequiredPermission.OWNER)
   @Put(':noteIdOrAlias/metadata/permissions/users/:userName')
   @OpenApi(
     {
@@ -267,7 +265,7 @@ export class NotesController {
   async setUserPermission(
     @RequestUser() user: User,
     @RequestNote() note: Note,
-    @Param('userName') username: string,
+    @Param('userName') username: Username,
     @Body('canEdit') canEdit: boolean,
   ): Promise<NotePermissionsDto> {
     const permissionUser = await this.userService.getUserByUsername(username);
@@ -280,8 +278,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.OWNER)
-  @UseGuards(TokenAuthGuard, PermissionsGuard)
+  @RequirePermission(RequiredPermission.OWNER)
   @Delete(':noteIdOrAlias/metadata/permissions/users/:userName')
   @OpenApi(
     {
@@ -295,7 +292,7 @@ export class NotesController {
   async removeUserPermission(
     @RequestUser() user: User,
     @RequestNote() note: Note,
-    @Param('userName') username: string,
+    @Param('userName') username: Username,
   ): Promise<NotePermissionsDto> {
     try {
       const permissionUser = await this.userService.getUserByUsername(username);
@@ -315,8 +312,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.OWNER)
-  @UseGuards(TokenAuthGuard, PermissionsGuard)
+  @RequirePermission(RequiredPermission.OWNER)
   @Put(':noteIdOrAlias/metadata/permissions/groups/:groupName')
   @OpenApi(
     {
@@ -343,8 +339,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.OWNER)
-  @UseGuards(TokenAuthGuard, PermissionsGuard)
+  @RequirePermission(RequiredPermission.OWNER)
   @Delete(':noteIdOrAlias/metadata/permissions/groups/:groupName')
   @OpenApi(
     {
@@ -369,8 +364,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.OWNER)
-  @UseGuards(TokenAuthGuard, PermissionsGuard)
+  @RequirePermission(RequiredPermission.OWNER)
   @Put(':noteIdOrAlias/metadata/permissions/owner')
   @OpenApi(
     {
@@ -384,7 +378,7 @@ export class NotesController {
   async changeOwner(
     @RequestUser() user: User,
     @RequestNote() note: Note,
-    @Body() newOwner: string,
+    @Body('newOwner') newOwner: Username,
   ): Promise<NoteDto> {
     const owner = await this.userService.getUserByUsername(newOwner);
     return await this.noteService.toNoteDto(
@@ -393,7 +387,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.READ)
+  @RequirePermission(RequiredPermission.READ)
   @Get(':noteIdOrAlias/revisions')
   @OpenApi(
     {
@@ -418,7 +412,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.READ)
+  @RequirePermission(RequiredPermission.READ)
   @Get(':noteIdOrAlias/revisions/:revisionId')
   @OpenApi(
     {
@@ -440,7 +434,7 @@ export class NotesController {
   }
 
   @UseInterceptors(GetNoteInterceptor)
-  @Permissions(Permission.READ)
+  @RequirePermission(RequiredPermission.READ)
   @Get(':noteIdOrAlias/media')
   @OpenApi({
     code: 200,

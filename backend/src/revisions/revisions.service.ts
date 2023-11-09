@@ -11,10 +11,12 @@ import { Repository } from 'typeorm';
 import { NotInDBError } from '../errors/errors';
 import { ConsoleLoggerService } from '../logger/console-logger.service';
 import { Note } from '../notes/note.entity';
+import { Tag } from '../notes/tag.entity';
 import { EditService } from './edit.service';
 import { RevisionMetadataDto } from './revision-metadata.dto';
 import { RevisionDto } from './revision.dto';
 import { Revision } from './revision.entity';
+import { extractRevisionMetadataFromContent } from './utils/extract-revision-metadata-from-content';
 
 class RevisionUserInfo {
   usernames: string[];
@@ -121,6 +123,9 @@ export class RevisionsService {
       createdAt: revision.createdAt,
       authorUsernames: revisionUserInfo.usernames,
       anonymousAuthorCount: revisionUserInfo.anonymousUserCount,
+      title: revision.title,
+      description: revision.description,
+      tags: (await revision.tags).map((tag) => tag.name),
     };
   }
 
@@ -131,34 +136,87 @@ export class RevisionsService {
       content: revision.content,
       length: revision.length,
       createdAt: revision.createdAt,
+      title: revision.title,
+      tags: (await revision.tags).map((tag) => tag.name),
+      description: revision.description,
       authorUsernames: revisionUserInfo.usernames,
       anonymousAuthorCount: revisionUserInfo.anonymousUserCount,
       patch: revision.patch,
       edits: await Promise.all(
-        (
-          await revision.edits
-        ).map(async (edit) => await this.editService.toEditDto(edit)),
+        (await revision.edits).map(
+          async (edit) => await this.editService.toEditDto(edit),
+        ),
       ),
     };
   }
 
+  /**
+   * Creates (but does not persist(!)) a new {@link Revision} for the given {@link Note}.
+   * Useful if the revision is saved together with the note in one action.
+   *
+   * @async
+   * @param note The note for which the revision should be created
+   * @param newContent The new note content
+   * @param yjsStateVector The yjs state vector that describes the new content
+   * @return {Revision} the created revision
+   * @return {undefined} if the revision couldn't be created because e.g. the content hasn't changed
+   */
   async createRevision(
     note: Note,
     newContent: string,
     yjsStateVector?: number[],
   ): Promise<Revision | undefined> {
-    // TODO: Save metadata
-    const latestRevision = await this.getLatestRevision(note);
-    const oldContent = latestRevision.content;
+    const latestRevision =
+      note.id === undefined ? undefined : await this.getLatestRevision(note);
+    const oldContent = latestRevision?.content;
     if (oldContent === newContent) {
       return undefined;
     }
     const patch = createPatch(
       note.publicId,
-      latestRevision.content,
+      latestRevision?.content ?? '',
       newContent,
     );
-    const revision = Revision.create(newContent, patch, note, yjsStateVector);
-    return await this.revisionRepository.save(revision);
+    const { title, description, tags } =
+      extractRevisionMetadataFromContent(newContent);
+
+    const tagEntities = tags.map((tagName) => {
+      const entity = new Tag();
+      entity.name = tagName;
+      return entity;
+    });
+
+    return Revision.create(
+      newContent,
+      patch,
+      note,
+      yjsStateVector ?? null,
+      title,
+      description,
+      tagEntities,
+    ) as Revision;
+  }
+
+  /**
+   * Creates and saves a new {@link Revision} for the given {@link Note}.
+   *
+   * @async
+   * @param note The note for which the revision should be created
+   * @param newContent The new note content
+   * @param yjsStateVector The yjs state vector that describes the new content
+   */
+  async createAndSaveRevision(
+    note: Note,
+    newContent: string,
+    yjsStateVector?: number[],
+  ): Promise<void> {
+    const revision = await this.createRevision(
+      note,
+      newContent,
+      yjsStateVector,
+    );
+    if (revision) {
+      await this.revisionRepository.save(revision);
+    }
   }
 }

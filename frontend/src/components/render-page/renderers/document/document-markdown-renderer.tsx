@@ -5,18 +5,21 @@
  */
 import { cypressId } from '../../../../utils/cypress-attribute'
 import type { ScrollProps } from '../../../editor-page/synced-scroll/scroll-props'
+import { useApplyDarkModeStyle } from '../../../layout/dark-mode/use-apply-dark-mode-style'
 import type { LineMarkers } from '../../../markdown-renderer/extensions/linemarker/add-line-marker-markdown-it-plugin'
 import { LinemarkerMarkdownExtension } from '../../../markdown-renderer/extensions/linemarker/linemarker-markdown-extension'
 import { useCalculateLineMarkerPosition } from '../../../markdown-renderer/hooks/use-calculate-line-marker-positions'
 import { useMarkdownExtensions } from '../../../markdown-renderer/hooks/use-markdown-extensions'
 import { MarkdownToReact } from '../../../markdown-renderer/markdown-to-react/markdown-to-react'
 import { useDocumentSyncScrolling } from '../../hooks/sync-scroll/use-document-sync-scrolling'
+import { useOnHeightChange } from '../../hooks/use-on-height-change'
+import { useTransparentBodyBackground } from '../../hooks/use-transparent-body-background'
 import { RendererType } from '../../window-post-message-communicator/rendering-message'
 import type { CommonMarkdownRendererProps, HeightChangeRendererProps } from '../common-markdown-renderer-props'
 import { DocumentTocSidebar } from './document-toc-sidebar'
 import styles from './markdown-document.module.scss'
 import useResizeObserver from '@react-hook/resize-observer'
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 
 export type DocumentMarkdownRendererProps = CommonMarkdownRendererProps & ScrollProps & HeightChangeRendererProps
 
@@ -41,11 +44,7 @@ export const DocumentMarkdownRenderer: React.FC<DocumentMarkdownRendererProps> =
   newLinesAreBreaks
 }) => {
   const rendererRef = useRef<HTMLDivElement | null>(null)
-  const [rendererSize, setRendererSize] = useState<DOMRectReadOnly>()
-  useResizeObserver(rendererRef.current, (entry) => {
-    setRendererSize(entry.contentRect)
-  })
-  useEffect(() => onHeightChange?.((rendererSize?.height ?? 0) + 1), [rendererSize, onHeightChange])
+  useOnHeightChange(rendererRef, onHeightChange)
 
   const internalDocumentRenderPaneRef = useRef<HTMLDivElement>(null)
   const [internalDocumentRenderPaneSize, setInternalDocumentRenderPaneSize] = useState<DOMRectReadOnly>()
@@ -58,8 +57,8 @@ export const DocumentMarkdownRenderer: React.FC<DocumentMarkdownRendererProps> =
     internalDocumentRenderPaneRef,
     rendererRef,
     contentLineCount,
-    scrollState,
-    onScroll
+    scrollState ?? null,
+    onScroll ?? null
   )
 
   const markdownBodyRef = useRef<HTMLDivElement>(null)
@@ -72,16 +71,19 @@ export const DocumentMarkdownRenderer: React.FC<DocumentMarkdownRendererProps> =
   )
   useCalculateLineMarkerPosition(markdownBodyRef, currentLineMarkers.current, recalculateLineMarkers)
 
+  useTransparentBodyBackground()
+  useApplyDarkModeStyle()
+
   return (
     <div
-      className={`${styles['markdown-document']} vh-100 bg-light`}
+      className={`${styles.document} vh-100`}
       ref={internalDocumentRenderPaneRef}
       onScroll={onUserScroll}
       data-scroll-element={true}
       onMouseEnter={onMakeScrollSource}
       onTouchStart={onMakeScrollSource}>
-      <div className={styles['markdown-document-side']} />
-      <div className={styles['markdown-document-content']}>
+      <div className={styles.side} />
+      <div className={styles.content}>
         <div ref={rendererRef} className={`position-relative`}>
           <div
             {...cypressId('markdown-body')}

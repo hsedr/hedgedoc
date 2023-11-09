@@ -9,12 +9,11 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { Observable } from 'rxjs';
 
-import { Note } from '../../notes/note.entity';
 import { NotesService } from '../../notes/notes.service';
-import { User } from '../../users/user.entity';
+import { extractNoteFromRequest } from './extract-note-from-request';
+import { CompleteRequest } from './request.type';
 
 /**
  * Saves the note identified by the `noteIdOrAlias` URL parameter
@@ -28,18 +27,11 @@ export class GetNoteInterceptor implements NestInterceptor {
     context: ExecutionContext,
     next: CallHandler,
   ): Promise<Observable<T>> {
-    const request: Request & { user: User; note: Note } = context
-      .switchToHttp()
-      .getRequest();
-    const noteIdOrAlias = request.params['noteIdOrAlias'];
-    request.note = await getNote(this.noteService, noteIdOrAlias);
+    const request: CompleteRequest = context.switchToHttp().getRequest();
+    const note = await extractNoteFromRequest(request, this.noteService);
+    if (note !== undefined) {
+      request.note = note;
+    }
     return next.handle();
   }
-}
-
-export async function getNote(
-  noteService: NotesService,
-  noteIdOrAlias: string,
-): Promise<Note> {
-  return await noteService.getNoteByIdOrAlias(noteIdOrAlias);
 }

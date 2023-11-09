@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -8,82 +8,71 @@ import { getGlobalState } from '../../../../../redux'
 import { setRealtimeConnectionState } from '../../../../../redux/realtime/methods'
 import { Logger } from '../../../../../utils/logger'
 import { isMockMode } from '../../../../../utils/test-modes'
+import { FrontendWebsocketAdapter } from './frontend-websocket-adapter'
 import { useWebsocketUrl } from './use-websocket-url'
-import type { MessageTransporter } from '@hedgedoc/commons'
-import { MockedBackendMessageTransporter, WebsocketTransporter } from '@hedgedoc/commons'
+import { DisconnectReason, MessageTransporter, MockedBackendTransportAdapter } from '@hedgedoc/commons'
 import type { Listener } from 'eventemitter2'
-import WebSocket from 'isomorphic-ws'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 const logger = new Logger('websocket connection')
-const WEBSOCKET_RECONNECT_INTERVAL = 3000
+const WEBSOCKET_RECONNECT_INTERVAL = 2000
+const WEBSOCKET_RECONNECT_MAX_DURATION = 5000
 
 /**
- * Creates a {@link WebsocketTransporter websocket message transporter} that handles the realtime communication with the backend.
+ * Creates a {@link MessageTransporter message transporter} that handles the realtime communication with the backend.
  *
  * @return the created connection handler
  */
 export const useRealtimeConnection = (): MessageTransporter => {
   const websocketUrl = useWebsocketUrl()
-  const messageTransporter = useMemo(() => {
+  const messageTransporter = useMemo(() => new MessageTransporter(), [])
+
+  const reconnectCount = useRef(0)
+  const disconnectReason = useRef<DisconnectReason | undefined>(undefined)
+  const establishWebsocketConnection = useCallback(() => {
     if (isMockMode) {
       logger.debug('Creating Loopback connection...')
-      return new MockedBackendMessageTransporter(getGlobalState().noteDetails.markdownContent.plain)
-    } else {
-      logger.debug('Creating Websocket connection...')
-      return new WebsocketTransporter()
-    }
-  }, [])
-
-  const establishWebsocketConnection = useCallback(() => {
-    if (messageTransporter instanceof WebsocketTransporter && websocketUrl) {
+      messageTransporter.setAdapter(
+        new MockedBackendTransportAdapter(getGlobalState().noteDetails?.markdownContent.plain ?? '')
+      )
+    } else if (websocketUrl) {
       logger.debug(`Connecting to ${websocketUrl.toString()}`)
-      const socket = new WebSocket(websocketUrl)
+
+      const socket = new WebSocket(websocketUrl.toString())
       socket.addEventListener('error', () => {
-        setTimeout(() => {
-          establishWebsocketConnection()
-        }, WEBSOCKET_RECONNECT_INTERVAL)
+        const timeout = WEBSOCKET_RECONNECT_INTERVAL + reconnectCount.current * 1000 + Math.random() * 1000
+        setTimeout(
+          () => {
+            reconnectCount.current += 1
+            establishWebsocketConnection()
+          },
+          Math.max(timeout, WEBSOCKET_RECONNECT_MAX_DURATION)
+        )
       })
       socket.addEventListener('open', () => {
-        messageTransporter.setWebsocket(socket)
+        messageTransporter.setAdapter(new FrontendWebsocketAdapter(socket))
       })
     }
   }, [messageTransporter, websocketUrl])
 
   const isConnected = useApplicationState((state) => state.realtimeStatus.isConnected)
-  const firstConnect = useRef(true)
-
-  const reconnectTimeout = useRef<number | undefined>(undefined)
 
   useEffect(() => {
-    if (isConnected) {
+    if (isConnected || reconnectCount.current > 0 || disconnectReason.current === DisconnectReason.USER_NOT_PERMITTED) {
       return
     }
-    if (firstConnect.current) {
-      establishWebsocketConnection()
-      firstConnect.current = false
-    } else {
-      reconnectTimeout.current = window.setTimeout(() => {
-        establishWebsocketConnection()
-      }, WEBSOCKET_RECONNECT_INTERVAL)
-    }
-  }, [establishWebsocketConnection, isConnected, messageTransporter])
+    establishWebsocketConnection()
+  }, [establishWebsocketConnection, isConnected])
 
   useEffect(() => {
     const readyListener = messageTransporter.doAsSoonAsReady(() => {
-      const timerId = reconnectTimeout.current
-      if (timerId !== undefined) {
-        window.clearTimeout(timerId)
-      }
-      reconnectTimeout.current = undefined
+      reconnectCount.current = 0
     })
 
     messageTransporter.on('connected', () => logger.debug(`Connected`))
     messageTransporter.on('disconnected', () => logger.debug(`Disconnected`))
 
     return () => {
-      const interval = reconnectTimeout.current
-      interval && window.clearTimeout(interval)
       readyListener.off()
     }
   }, [messageTransporter])
@@ -98,9 +87,16 @@ export const useRealtimeConnection = (): MessageTransporter => {
 
   useEffect(() => {
     const connectedListener = messageTransporter.doAsSoonAsReady(() => setRealtimeConnectionState(true))
-    const disconnectedListener = messageTransporter.on('disconnected', () => setRealtimeConnectionState(false), {
-      objectify: true
-    }) as Listener
+    const disconnectedListener = messageTransporter.on(
+      'disconnected',
+      (reason?: DisconnectReason) => {
+        disconnectReason.current = reason
+        setRealtimeConnectionState(false)
+      },
+      {
+        objectify: true
+      }
+    ) as Listener
 
     return () => {
       connectedListener.off()

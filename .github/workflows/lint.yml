@@ -11,7 +11,7 @@ on:
     branches: [ develop ]
 
 env:
-  NODEJS_VERSION: 18
+  NODEJS_VERSION: 20
 
 jobs:
   lint:
@@ -19,7 +19,7 @@ jobs:
     name: Lint files and check formatting
     steps:
       - name: Checkout repository
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup node
         uses: ./.github/actions/setup-node
@@ -27,7 +27,7 @@ jobs:
           NODEJS_VERSION: ${{ env.NODEJS_VERSION }}
 
       - name: Run ESLint
-        run: yarn turbo run lint
+        run: yarn lint
         shell: bash
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}

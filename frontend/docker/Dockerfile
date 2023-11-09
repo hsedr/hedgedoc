@@ -3,14 +3,14 @@
 # SPDX-License-Identifier: CC-BY-SA-4.0
 
 # BASE
-FROM docker.io/node:18-alpine@sha256:ca5d399560a9d239cbfa28eec00417f1505e5e108f3ec6938d230767eaa81f61 AS base
+FROM docker.io/node:20-alpine@sha256:8e015de364a2eb2ed7c52a558e9f716dcb615560ffd132234087c10ccc1f2c63 AS base
 RUN apk add --no-cache tini
 ENTRYPOINT ["tini", "--"]
 
 # BUILD
 FROM base AS builder
 
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat git
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
@@ -26,9 +26,7 @@ ARG TURBO_TEAM
 ARG TURBO_API
 ARG TURBO_TOKEN
 
-RUN rm -rf frontend/public/public
-RUN rm -rf frontend/src/pages/api
-RUN yarn turbo run build --filter=frontend --no-cache --no-daemon
+RUN yarn build --filter=frontend --no-cache --no-daemon
 
 # RUNNER
 FROM base
@@ -43,10 +41,7 @@ LABEL org.opencontainers.image.licenses='AGPL-3.0'
 
 WORKDIR /usr/src/app
 
-COPY --from=builder --chown=node:node /usr/src/app/frontend/.next/standalone ./
-COPY --from=builder --chown=node:node /usr/src/app/frontend/.next/static ./frontend/.next/static
-COPY --from=builder /usr/src/app/frontend/next.config.js ./frontend/next.config.js
-COPY --from=builder /usr/src/app/frontend/public ./frontend/public
+COPY --from=builder --chown=node:node /usr/src/app/frontend/dist ./
 
 USER node
 

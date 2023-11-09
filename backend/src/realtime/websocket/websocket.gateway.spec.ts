@@ -29,17 +29,19 @@ import { NotesModule } from '../../notes/notes.module';
 import { NotesService } from '../../notes/notes.service';
 import { Tag } from '../../notes/tag.entity';
 import { NoteGroupPermission } from '../../permissions/note-group-permission.entity';
+import { NotePermission } from '../../permissions/note-permission.enum';
 import { NoteUserPermission } from '../../permissions/note-user-permission.entity';
 import { PermissionsModule } from '../../permissions/permissions.module';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { Edit } from '../../revisions/edit.entity';
 import { Revision } from '../../revisions/revision.entity';
-import { SessionModule } from '../../session/session.module';
-import { SessionService } from '../../session/session.service';
-import { Session } from '../../users/session.entity';
+import { Session } from '../../sessions/session.entity';
+import { SessionModule } from '../../sessions/session.module';
+import { SessionService } from '../../sessions/session.service';
 import { User } from '../../users/user.entity';
 import { UsersModule } from '../../users/users.module';
 import { UsersService } from '../../users/users.service';
+import { Username } from '../../utils/username';
 import * as websocketConnectionModule from '../realtime-note/realtime-connection';
 import { RealtimeConnection } from '../realtime-note/realtime-connection';
 import { RealtimeNote } from '../realtime-note/realtime-note';
@@ -164,7 +166,7 @@ describe('Websocket gateway', () => {
           ),
       );
 
-    const mockUsername = 'mockUsername';
+    const mockUsername: Username = 'mock-username';
     jest
       .spyOn(sessionService, 'fetchUsernameForSessionId')
       .mockImplementation((sessionId: string) =>
@@ -221,15 +223,15 @@ describe('Websocket gateway', () => {
       });
 
     jest
-      .spyOn(permissionsService, 'mayRead')
+      .spyOn(permissionsService, 'determinePermission')
       .mockImplementation(
-        (user: User | null, note: Note): Promise<boolean> =>
-          Promise.resolve(
-            (user === mockUser &&
-              note === mockedNote &&
-              userHasReadPermissions) ||
-              (user === null && note === mockedGuestNote),
-          ),
+        async (user: User | null, note: Note): Promise<NotePermission> =>
+          (user === mockUser &&
+            note === mockedNote &&
+            userHasReadPermissions) ||
+          (user === null && note === mockedGuestNote)
+            ? NotePermission.READ
+            : NotePermission.DENY,
       );
 
     const mockedRealtimeNote = Mock.of<RealtimeNote>({

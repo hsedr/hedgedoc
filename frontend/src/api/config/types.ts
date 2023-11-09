@@ -5,10 +5,10 @@
  */
 
 export interface FrontendConfig {
-  allowAnonymous: boolean
   allowRegister: boolean
   authProviders: AuthProvider[]
   branding: BrandingConfig
+  guestAccess: GuestAccessLevel
   useImageProxy: boolean
   specialUrls: SpecialUrls
   version: BackendVersion
@@ -16,12 +16,16 @@ export interface FrontendConfig {
   maxDocumentLength: number
 }
 
+export enum GuestAccessLevel {
+  DENY = 'deny',
+  READ = 'read',
+  WRITE = 'write',
+  CREATE = 'create'
+}
+
 export enum AuthProviderType {
-  DROPBOX = 'dropbox',
-  FACEBOOK = 'facebook',
   GITHUB = 'github',
   GOOGLE = 'google',
-  TWITTER = 'twitter',
   GITLAB = 'gitlab',
   OAUTH2 = 'oauth2',
   LDAP = 'ldap',
@@ -36,22 +40,16 @@ export type AuthProviderTypeWithCustomName =
   | AuthProviderType.SAML
 
 export type AuthProviderTypeWithoutCustomName =
-  | AuthProviderType.DROPBOX
-  | AuthProviderType.FACEBOOK
   | AuthProviderType.GITHUB
   | AuthProviderType.GOOGLE
-  | AuthProviderType.TWITTER
   | AuthProviderType.LOCAL
 
 export const authProviderTypeOneClick = [
-  AuthProviderType.DROPBOX,
-  AuthProviderType.FACEBOOK,
   AuthProviderType.GITHUB,
   AuthProviderType.GITLAB,
   AuthProviderType.GOOGLE,
   AuthProviderType.OAUTH2,
-  AuthProviderType.SAML,
-  AuthProviderType.TWITTER
+  AuthProviderType.SAML
 ]
 
 export interface AuthProviderWithCustomName {

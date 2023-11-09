@@ -7,13 +7,13 @@ import fontStyles from '../../../../global-styles/variables.module.scss'
 import { AsyncLoadingBoundary } from '../../../components/common/async-loading-boundary/async-loading-boundary'
 import { ShowIf } from '../../../components/common/show-if/show-if'
 import type { CodeProps } from '../../../components/markdown-renderer/replace-components/code-block-component-replacer'
-import { useDarkModeState } from '../../../hooks/common/use-dark-mode-state'
+import { useDarkModeState } from '../../../hooks/dark-mode/use-dark-mode-state'
 import { Logger } from '../../../utils/logger'
 import { testId } from '../../../utils/test-id'
 import React, { useEffect, useRef, useState } from 'react'
-import { Alert } from 'react-bootstrap'
-import { Trans, useTranslation } from 'react-i18next'
+import { useTranslation } from 'react-i18next'
 import { useAsync } from 'react-use'
+import { TranslatedApplicationErrorAlert } from '../../../components/common/application-error-alert/translated-application-error-alert'
 
 const log = new Logger('FlowChart')
 
@@ -72,9 +72,7 @@ export const FlowChart: React.FC<CodeProps> = ({ code }) => {
   return (
     <AsyncLoadingBoundary loading={loading || !flowchartLib} componentName={'flowchart.js'} error={!!libLoadingError}>
       <ShowIf condition={syntaxError}>
-        <Alert variant={'danger'}>
-          <Trans i18nKey={'renderer.flowchart.invalidSyntax'} />
-        </Alert>
+        <TranslatedApplicationErrorAlert errorI18nKey={'renderer.flowchart.invalidSyntax'} />
       </ShowIf>
       <div ref={diagramRef} {...testId('flowchart')} className={'text-center'} />
     </AsyncLoadingBoundary>

@@ -17,7 +17,7 @@ describe('File upload', () => {
       cy.intercept(
         {
           method: 'POST',
-          url: 'api/private/media'
+          url: '/api/private/media'
         },
         {
           statusCode: 201,
@@ -29,8 +29,8 @@ describe('File upload', () => {
     })
     it('via button', () => {
       cy.getByCypressId('editor-pane').should('have.attr', 'data-cypress-editor-ready', 'true')
-      cy.getByCypressId('editor-toolbar-upload-image-button').should('be.visible')
-      cy.getByCypressId('editor-toolbar-upload-image-input').selectFile(
+      cy.getByCypressId('toolbar.uploadImage').should('be.visible')
+      cy.getByCypressId('toolbar.uploadImage.input').selectFile(
         {
           contents: '@demoImage',
           fileName: 'demo.png',
@@ -74,14 +74,14 @@ describe('File upload', () => {
     cy.intercept(
       {
         method: 'POST',
-        url: 'api/private/media'
+        url: '/api/private/media'
       },
       {
         statusCode: 400
       }
     )
-    cy.getByCypressId('editor-toolbar-upload-image-button').should('be.visible')
-    cy.getByCypressId('editor-toolbar-upload-image-input').selectFile(
+    cy.getByCypressId('toolbar.uploadImage').should('be.visible')
+    cy.getByCypressId('toolbar.uploadImage.input').selectFile(
       {
         contents: '@demoImage',
         fileName: 'demo.png',

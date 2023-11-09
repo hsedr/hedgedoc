@@ -1,13 +1,14 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDate, IsOptional, IsString } from 'class-validator';
+import { IsDate, IsLowercase, IsOptional, IsString } from 'class-validator';
 
 import { BaseDto } from '../utils/base.dto.';
+import { Username } from '../utils/username';
 
 export class MediaUploadDto extends BaseDto {
   /**
@@ -20,7 +21,7 @@ export class MediaUploadDto extends BaseDto {
 
   /**
    * The publicId of the note to which the uploaded file is linked to.
-   * @example "noteId" TODO how looks a note id?
+   * @example "b604x5885k9k01bq7tsmawvnp0"
    */
   @IsString()
   @IsOptional()
@@ -41,6 +42,8 @@ export class MediaUploadDto extends BaseDto {
    * @example "testuser5"
    */
   @IsString()
+  @IsLowercase()
+  @IsOptional()
   @ApiProperty()
-  username: string;
+  username: Username | null;
 }

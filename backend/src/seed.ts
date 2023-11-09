@@ -19,7 +19,7 @@ import { NoteGroupPermission } from './permissions/note-group-permission.entity'
 import { NoteUserPermission } from './permissions/note-user-permission.entity';
 import { Edit } from './revisions/edit.entity';
 import { Revision } from './revisions/revision.entity';
-import { Session } from './users/session.entity';
+import { Session } from './sessions/session.entity';
 import { User } from './users/user.entity';
 import { hashPassword } from './utils/password';
 
@@ -77,6 +77,10 @@ dataSource
         'This is a test note',
         'This is a test note',
         notes[i],
+        null,
+        'Test note',
+        '',
+        [],
       ) as Revision;
       const edit = Edit.create(author, 1, 42) as Edit;
       revision.edits = Promise.resolve([edit]);

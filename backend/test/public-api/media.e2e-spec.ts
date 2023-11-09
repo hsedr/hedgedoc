@@ -93,6 +93,15 @@ describe('Media', () => {
           .expect('Content-Type', /json/)
           .expect(500);
       });
+      it('no file uploaded', async () => {
+        await request(testSetup.app.getHttpServer())
+          .post('/api/v2/media')
+          .set('Authorization', `Bearer ${testSetup.authTokens[0].secret}`)
+          .set('HedgeDoc-Note', 'testAlias1')
+          .expect('Content-Type', /json/)
+          .expect(400);
+      });
+
       afterEach(async () => {
         await ensureDeleted(uploadPath);
       });
@@ -125,6 +134,85 @@ describe('Media', () => {
         .delete('/api/v2/media/' + filename)
         .set('Authorization', `Bearer ${testSetup.authTokens[1].secret}`)
         .expect(403);
+    });
+    it('deleting user is owner of file', async () => {
+      // upload a file with the default test user
+      const testNote = await testSetup.notesService.createNote(
+        'test content',
+        null,
+        'test_delete_media_file',
+      );
+      const testImage = await fs.readFile('test/public-api/fixtures/test.png');
+      const upload = await testSetup.mediaService.saveFile(
+        testImage,
+        testSetup.users[0],
+        testNote,
+      );
+      const filename = upload.fileUrl.split('/').pop() || '';
+
+      const agent2 = request.agent(testSetup.app.getHttpServer());
+
+      // try to delete upload with second user
+      await agent2
+        .delete('/api/v2/media/' + filename)
+        .set('Authorization', `Bearer ${testSetup.authTokens[1].secret}`)
+        .expect(403);
+
+      await agent2
+        .get('/uploads/' + filename)
+        .set('Authorization', `Bearer ${testSetup.authTokens[1].secret}`)
+        .expect(200);
+
+      // delete upload for real
+      await agent2
+        .delete('/api/v2/media/' + filename)
+        .set('Authorization', `Bearer ${testSetup.authTokens[0].secret}`)
+        .expect(204);
+
+      // Test if file is really deleted
+      await agent2
+        .get('/uploads/' + filename)
+        .set('Authorization', `Bearer ${testSetup.authTokens[1].secret}`)
+        .expect(404);
+    });
+    it('deleting user is owner of note', async () => {
+      // upload a file with the default test user
+      const testNote = await testSetup.notesService.createNote(
+        'test content',
+        testSetup.users[2],
+        'test_delete_media_note',
+      );
+      const testImage = await fs.readFile('test/public-api/fixtures/test.png');
+      const upload = await testSetup.mediaService.saveFile(
+        testImage,
+        testSetup.users[0],
+        testNote,
+      );
+      const filename = upload.fileUrl.split('/').pop() || '';
+
+      const agent2 = request.agent(testSetup.app.getHttpServer());
+      // try to delete upload with second user
+      await agent2
+        .delete('/api/v2/media/' + filename)
+        .set('Authorization', `Bearer ${testSetup.authTokens[1].secret}`)
+        .expect(403);
+
+      await agent2
+        .get('/uploads/' + filename)
+        .set('Authorization', `Bearer ${testSetup.authTokens[1].secret}`)
+        .expect(200);
+
+      // delete upload for real
+      await agent2
+        .delete('/api/v2/media/' + filename)
+        .set('Authorization', `Bearer ${testSetup.authTokens[2].secret}`)
+        .expect(204);
+
+      // Test if file is really deleted
+      await agent2
+        .get('/uploads/' + filename)
+        .set('Authorization', `Bearer ${testSetup.authTokens[1].secret}`)
+        .expect(404);
     });
   });
 });

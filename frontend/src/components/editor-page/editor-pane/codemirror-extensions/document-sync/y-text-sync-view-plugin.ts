@@ -5,10 +5,8 @@
  */
 import type { ChangeSpec, Transaction } from '@codemirror/state'
 import { Annotation } from '@codemirror/state'
-import type { EditorView, PluginValue } from '@codemirror/view'
-import type { ViewUpdate } from '@codemirror/view'
-import type { Text as YText } from 'yjs'
-import type { Transaction as YTransaction, YTextEvent } from 'yjs'
+import type { EditorView, PluginValue, ViewUpdate } from '@codemirror/view'
+import type { Text as YText, Transaction as YTransaction, YTextEvent } from 'yjs'
 
 const syncAnnotation = Annotation.define()
 
@@ -18,7 +16,11 @@ const syncAnnotation = Annotation.define()
 export class YTextSyncViewPlugin implements PluginValue {
   private readonly observer: YTextSyncViewPlugin['onYTextUpdate']
 
-  constructor(private view: EditorView, private readonly yText: YText, pluginLoaded: () => void) {
+  constructor(
+    private view: EditorView,
+    private readonly yText: YText,
+    pluginLoaded: () => void
+  ) {
     this.observer = this.onYTextUpdate.bind(this)
     this.yText.observe(this.observer)
     pluginLoaded()
@@ -35,9 +37,11 @@ export class YTextSyncViewPlugin implements PluginValue {
     const [changes] = event.delta.reduce(
       ([changes, position], delta) => {
         if (delta.insert !== undefined && typeof delta.insert === 'string') {
-          return [[...changes, { from: position, to: position, insert: delta.insert }], position]
+          changes.push({ from: position, to: position, insert: delta.insert })
+          return [changes, position]
         } else if (delta.delete !== undefined) {
-          return [[...changes, { from: position, to: position + delta.delete, insert: '' }], position + delta.delete]
+          changes.push({ from: position, to: position + delta.delete, insert: '' })
+          return [changes, position + delta.delete]
         } else if (delta.retain !== undefined) {
           return [changes, position + delta.retain]
         } else {

@@ -19,8 +19,7 @@ export class RealtimeConnection {
   private readonly transporter: MessageTransporter;
   private readonly yDocSyncAdapter: YDocSyncServerAdapter;
   private readonly realtimeUserStateAdapter: RealtimeUserStatusAdapter;
-
-  private displayName: string;
+  private readonly displayName: string;
 
   /**
    * Instantiates the connection wrapper.
@@ -35,7 +34,7 @@ export class RealtimeConnection {
     messageTransporter: MessageTransporter,
     private user: User | null,
     private realtimeNote: RealtimeNote,
-    private acceptEdits: boolean,
+    public acceptEdits: boolean,
   ) {
     this.displayName = user?.displayName ?? generateRandomName();
     this.transporter = messageTransporter;
@@ -46,13 +45,17 @@ export class RealtimeConnection {
     this.yDocSyncAdapter = new YDocSyncServerAdapter(
       this.transporter,
       realtimeNote.getRealtimeDoc(),
-      acceptEdits,
+      () => acceptEdits,
     );
     this.realtimeUserStateAdapter = new RealtimeUserStatusAdapter(
       this.user?.username ?? null,
       this.getDisplayName(),
-      this,
-      acceptEdits,
+      () =>
+        this.realtimeNote
+          .getConnections()
+          .map((connection) => connection.getRealtimeUserStateAdapter()),
+      this.getTransporter(),
+      () => acceptEdits,
     );
   }
 

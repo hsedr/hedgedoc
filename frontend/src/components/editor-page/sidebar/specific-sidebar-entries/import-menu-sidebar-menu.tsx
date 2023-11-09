@@ -1,20 +1,22 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { cypressId } from '../../../../utils/cypress-attribute'
+import { IconGitlab } from '../../../common/icons/additional/icon-gitlab'
 import { SidebarButton } from '../sidebar-button/sidebar-button'
 import { SidebarMenu } from '../sidebar-menu/sidebar-menu'
 import type { SpecificSidebarMenuProps } from '../types'
 import { DocumentSidebarMenuSelection } from '../types'
 import { ImportMarkdownSidebarEntry } from './import-markdown-sidebar-entry'
 import React, { Fragment, useCallback } from 'react'
-import { ArrowLeft as IconArrowLeft } from 'react-bootstrap-icons'
-import { Clipboard as IconClipboard } from 'react-bootstrap-icons'
-import { CloudUpload as IconCloudUpload } from 'react-bootstrap-icons'
-import { Git as IconGit } from 'react-bootstrap-icons'
-import { Github as IconGithub } from 'react-bootstrap-icons'
+import {
+  ArrowLeft as IconArrowLeft,
+  Clipboard as IconClipboard,
+  CloudUpload as IconCloudUpload,
+  Github as IconGithub
+} from 'react-bootstrap-icons'
 import { Trans, useTranslation } from 'react-i18next'
 
 /**
@@ -38,7 +40,6 @@ export const ImportMenuSidebarMenu: React.FC<SpecificSidebarMenuProps> = ({
   const onClickHandler = useCallback(() => {
     onClick(menuId)
   }, [menuId, onClick])
-  //todo: replace git with gitlab
   return (
     <Fragment>
       <SidebarButton
@@ -50,9 +51,13 @@ export const ImportMenuSidebarMenu: React.FC<SpecificSidebarMenuProps> = ({
         <Trans i18nKey={'editor.documentBar.import'} />
       </SidebarButton>
       <SidebarMenu expand={expand}>
-        <SidebarButton icon={IconGithub}>Gist</SidebarButton>
-        <SidebarButton icon={IconGit}>Gitlab Snippet</SidebarButton>
-        <SidebarButton icon={IconClipboard}>
+        <SidebarButton icon={IconGithub} disabled={true}>
+          Gist
+        </SidebarButton>
+        <SidebarButton icon={IconGitlab} disabled={true}>
+          Gitlab Snippet
+        </SidebarButton>
+        <SidebarButton icon={IconClipboard} disabled={true}>
           <Trans i18nKey={'editor.import.clipboard'} />
         </SidebarButton>
         <ImportMarkdownSidebarEntry />

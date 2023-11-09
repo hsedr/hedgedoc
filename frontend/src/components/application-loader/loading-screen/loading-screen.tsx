@@ -11,7 +11,7 @@ import React from 'react'
 import { Alert } from 'react-bootstrap'
 
 export interface LoadingScreenProps {
-  errorMessage?: string | ReactElement
+  errorMessage?: string | ReactElement | null
 }
 
 /**
@@ -21,7 +21,7 @@ export interface LoadingScreenProps {
  */
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({ errorMessage }) => {
   return (
-    <div className={`${styles.loader} ${styles.middle} text-light overflow-hidden`}>
+    <div className={`${styles.loader} text-light bg-dark`}>
       <div className='mb-3 text-light'>
         <span className={`d-block`}>
           <LoadingAnimation error={!!errorMessage} />

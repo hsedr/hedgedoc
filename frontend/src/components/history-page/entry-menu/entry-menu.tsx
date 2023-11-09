@@ -1,10 +1,9 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { HistoryEntryOrigin } from '../../../api/history/types'
-import { useApplicationState } from '../../../hooks/common/use-application-state'
 import { cypressId } from '../../../utils/cypress-attribute'
 import { UiIcon } from '../../common/icons/ui-icon'
 import { ShowIf } from '../../common/show-if/show-if'
@@ -13,10 +12,9 @@ import styles from './entry-menu.module.scss'
 import { RemoveNoteEntryItem } from './remove-note-entry-item'
 import React from 'react'
 import { Dropdown } from 'react-bootstrap'
-import { Cloud as IconCloud } from 'react-bootstrap-icons'
-import { Laptop as IconLaptop } from 'react-bootstrap-icons'
-import { ThreeDots as IconThreeDots } from 'react-bootstrap-icons'
+import { Cloud as IconCloud, Laptop as IconLaptop, ThreeDots as IconThreeDots } from 'react-bootstrap-icons'
 import { Trans, useTranslation } from 'react-i18next'
+import { useIsLoggedIn } from '../../../hooks/common/use-is-logged-in'
 
 export interface EntryMenuProps {
   id: string
@@ -46,12 +44,12 @@ export const EntryMenu: React.FC<EntryMenuProps> = ({
   className
 }) => {
   useTranslation()
-  const userExists = useApplicationState((state) => !!state.user)
+  const userExists = useIsLoggedIn()
 
   return (
     <Dropdown className={`d-inline-flex ${className || ''}`} {...cypressId('history-entry-menu')}>
       <Dropdown.Toggle
-        variant={'light'}
+        variant={'secondary'}
         id={`dropdown-card-${id}`}
         className={`no-arrow ${styles['history-menu']} d-inline-flex align-items-center`}>
         <UiIcon icon={IconThreeDots} />
@@ -78,7 +76,7 @@ export const EntryMenu: React.FC<EntryMenuProps> = ({
 
         <RemoveNoteEntryItem onConfirm={onRemoveFromHistory} noteTitle={title} />
 
-        {/* TODO Check permissions (ownership) before showing option for delete  */}
+        {/* TODO Check permissions (ownership) before showing option for delete  (https://github.com/hedgedoc/hedgedoc/issues/5036)*/}
         <ShowIf condition={userExists}>
           <Dropdown.Divider />
           <DeleteNoteItem onConfirm={onDeleteNote} noteTitle={title} />

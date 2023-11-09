@@ -1,9 +1,9 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-import type { CheatsheetExtension } from '../../../components/editor-page/cheatsheet/cheatsheet-extension'
+import type { CheatsheetExtension } from '../../../components/cheatsheet/cheatsheet-extension'
 import {
   basicCompletion,
   codeFenceRegex
@@ -22,7 +22,7 @@ export class CsvTableAppExtension extends AppExtension {
   }
 
   buildCheatsheetExtensions(): CheatsheetExtension[] {
-    return [{ i18nKey: 'csv', entries: [{ i18nKey: 'table' }, { i18nKey: 'header' }] }]
+    return [{ i18nKey: 'csv', topics: [{ i18nKey: 'table' }, { i18nKey: 'header' }] }]
   }
 
   buildAutocompletion(): CompletionSource[] {
